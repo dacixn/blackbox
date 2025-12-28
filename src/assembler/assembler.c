@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
             char *str_start;
 
             if (sscanf(s + 5, " %d", &fd) != 1) {
-                fprintf(stderr, "Syntax error on line %d: expected WRITE <fd> '<char>'\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected WRITE <fd> \"<string>\"\n", lineno);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -104,6 +104,54 @@ int main(int argc, char *argv[]) {
             }
             fputc(OPCODE_PRINT, out);
             fputc((uint8_t)c, out);
+        }
+        else if (strncmp(s, "PUSH", 4) == 0) {
+            int32_t value;
+            if (sscanf(s+4, " %d", &value) != 1) {
+                fprintf(stderr, "Syntax error on line %d: expected PUSH <value>", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;   
+            }
+            fputc(OPCODE_PUSH, out);
+            fputc((value >> 0) & 0xFF, out);
+            fputc((value >> 8) & 0xFF, out);
+            fputc((value >> 16) & 0xFF, out);
+            fputc((value >> 24) & 0xFF, out);
+        } 
+        else if (strncmp(s, "POP", 3) == 0) {
+            char regname[3];
+            if (sscanf(s + 3, " %2s", regname) != 1) {
+                fprintf(stderr, "Syntax error on line %d: expected POP <register>\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t reg;
+            if (strcmp(regname,"R0")==0) 
+                reg=0;
+            else if (strcmp(regname,"R1")==0) 
+                reg=1;
+            else if (strcmp(regname,"R2")==0) 
+                reg=2;
+            else if (strcmp(regname,"R3")==0) 
+                reg=3;
+            else if (strcmp(regname,"R4")==0) 
+                reg=4;
+            else if (strcmp(regname,"R5")==0) 
+                reg=5;
+            else if (strcmp(regname,"R6")==0) 
+                reg=6;
+            else if (strcmp(regname,"R7")==0) 
+                reg=7;
+            else {
+                fprintf(stderr, "Invalid register on line %d\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            fputc(OPCODE_POP, out);
+            fputc(reg, out);
         }
         else {
             fprintf(stderr, "Unknown instruction on line %d: %s\n", lineno, s);

@@ -2,6 +2,7 @@
 #define OPCODES_H
 
 #define STACK_SIZE 1024
+#define NUM_REGISTERS 8
 
 #define OPCODE_WRITE 0x01
 #define OPCODE_NEWLINE 0x02
@@ -12,6 +13,7 @@
 #define OPCODE_SUB 0x07
 #define OPCODE_DUP 0x08
 #define OPCODE_SWAP 0x09
+#define OPCODE_PRINTREG 0x10
 #define OPCODE_HALT  0xFF
 
 #endif

@@ -9,7 +9,9 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s program.bin\n", argv[0]);
         return 1;
     }
-
+    int32_t registers[NUM_REGISTERS];
+    int32_t stack[STACK_SIZE];
+    size_t sp = 0;  
     FILE *f = fopen(argv[1], "rb");
     if (!f) {
         perror("fopen");
@@ -41,25 +43,63 @@ int main(int argc, char *argv[]) {
         uint8_t opcode = program[pc++];
         switch (opcode) {
             case OPCODE_WRITE: {
-            uint8_t fd = program[pc++];
-            uint8_t len = program[pc++];
-            if (fd != 1 && fd != 2) {
-                fprintf(stderr, "Error: invalid fd %u\n", fd);
-                free(program);
-                return 1;
+                uint8_t fd = program[pc++];
+                uint8_t len = program[pc++];
+                if (fd != 1 && fd != 2) {
+                    fprintf(stderr, "Error: invalid fd %u\n", fd);
+                    free(program);
+                    return 1;
+                }
+                if (pc + len > size) {
+                    fprintf(stderr, "Error: string past end of program\n");
+                    free(program);
+                    return 1;
+                }
+                if (write(fd, &program[pc], len) != len) {
+                    perror("write");
+                    free(program);
+                    return 1;
+                }
+                pc += len;
+                break;
             }
-            if (pc + len > size) {
-                fprintf(stderr, "Error: string past end of program\n");
-                free(program);
-                return 1;
+            case OPCODE_PUSH: {
+                if (pc + 3 >= size) {
+                    fprintf(stderr, "Missing operand for PUSH\n");
+                    free(program);
+                    return 1;
+                }
+                if (sp >= STACK_SIZE) {
+                    fprintf(stderr, "Stack overflow\n");
+                    free(program);
+                    return 1;
+                }
+                int32_t value = program[pc] | (program[pc+1]<<8) | (program[pc+2]<<16) | (program[pc+3]<<24);
+                pc += 4;
+
+                stack[sp++] = value;
+                break;
             }
-            if (write(fd, &program[pc], len) != len) {
-                perror("write");
-                free(program);
-                return 1;
-            }
-            pc += len;
-            break;
+            case OPCODE_POP: {
+                if (pc >= size) {
+                    fprintf(stderr, "Missing operand for POP\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t reg = program[pc++];
+                if (reg >= NUM_REGISTERS) {
+                    fprintf(stderr, "Invalid register %u\n", reg);
+                    free(program);
+                    return 1;
+                }
+                if (sp == 0) {
+                    fprintf(stderr, "Stack underflow\n");
+                    free(program);
+                    return 1;
+                }
+                registers[reg] = stack[--sp];
+                printf("R0=%d R1=%d\n", registers[0], registers[1]);
+                break;
             }
             case OPCODE_NEWLINE:
                 putchar('\n'); 
