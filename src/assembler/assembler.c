@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
         if (*s == '\0' || *s == ';')
             continue;
         
-        if (strncmp(s, "WRITE", 5) == 0) {
+        if (strncmp(s, "WRITE", 5) == 0) { // TODO: handle stderr
             int fd;
             char c;
             if (sscanf(s + 5, " %d '%c'", &fd, &c) != 2) {
