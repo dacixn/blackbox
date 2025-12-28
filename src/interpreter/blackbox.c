@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     }
 
     fseek(f, 0, SEEK_END);
-    long size = ftell(f);
+    size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
 
     uint8_t *program = malloc(size);
@@ -25,10 +25,16 @@ int main(int argc, char *argv[]) {
         fclose(f);
         return 1;
     }
-    fread(program, 1, size, f);
+    size_t n = fread(program, 1, size, f);
+    if (n != size) {
+        perror("fread");
+        free(program);
+        fclose(f);
+        return 1;
+    }
     fclose(f);
 
-    long pc = 0;
+    size_t pc = 0;
 
     while (pc < size) {
         uint8_t opcode = program[pc++];
