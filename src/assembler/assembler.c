@@ -43,15 +43,33 @@ int main(int argc, char *argv[]) {
         if (*s == '\0' || *s == ';')
             continue;
         
-        if (strncmp(s, "WRITE", 5) == 0) { // TODO: handle stderr
+        if (strncmp(s, "WRITE", 5) == 0) {
             int fd;
-            char c;
-            if (sscanf(s + 5, " %d '%c'", &fd, &c) != 2) {
+            char *str_start;
+
+            if (sscanf(s + 5, " %d", &fd) != 2) {
                 fprintf(stderr, "Syntax error on line %d: expected WRITE <fd> '<char>'\n", lineno);
                 fclose(in);
                 fclose(out);
                 return 1;
             }
+            if (fd != 1 && fd != 2) {
+                fprintf(stderr, "Invalid file descriptor on line %d: %d (only 1=stdout, 2=stderr allowed)\n", lineno, fd);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            str_start = strchr(s, '"');
+            if (!str_start) {
+                fprintf(stderr, "Syntax error on line %d: missing opening quote for string\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            str_start++;
+
+            char *str_end = strchr(str_start, '"');
+            if (!str_end)
             fputc(OPCODE_WRITE, out);
             fputc((uint8_t)fd, out);
             fputc((uint8_t)c, out);

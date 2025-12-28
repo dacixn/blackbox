@@ -48,6 +48,11 @@ int main(int argc, char *argv[]) {
                 }
                 uint8_t fd = program[pc++];
                 uint8_t value = program[pc++];
+                if (fd != 1 && fd != 2) {
+                    fprintf(stderr, "Error: invalid file descriptor %u at position %zu (only 1=stdout, 2=stderr allowed)\n", fd, pc - 2);
+                    free(program);
+                    return 1;
+                }
                 if (write(fd, &value, 1) != 1) {
                     perror("write");
                     free(program);
