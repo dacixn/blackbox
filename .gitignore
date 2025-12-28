@@ -1,2 +1,5 @@
 src/interpreter/blackbox
 src/interpreter/test.bin
+src/assembler/asm
+src/assembler/test.bbx
+src/assembler/test.bcx
