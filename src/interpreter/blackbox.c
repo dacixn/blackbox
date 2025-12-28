@@ -61,6 +61,16 @@ int main(int argc, char *argv[]) {
             case OPCODE_HALT:
                 free(program);
                 return 0;
+            case OPCODE_PRINT: {
+                if (pc >= size) {
+                    printf("Error: missing operand for PRINT\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t value = program[pc++];
+                putchar(value);
+                break;
+            }
             default:
                 printf("Unknown opcode 0x%02X at position %ld\n", opcode, pc - 1);
                 free(program);

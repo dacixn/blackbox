@@ -59,6 +59,15 @@ int main(int argc, char *argv[]) {
         else if (strcmp(s, "HALT") == 0) {
             fputc(OPCODE_HALT, out);
         }
+        else if (strncmp(s, "PRINT", 5) == 0) {
+            char c;
+            if (sscanf(s + 5, " '%c", &c) != 1) {
+                fprintf(stderr, "Syntax error on line %d\n", lineno);
+                return 1;
+            }
+            fputc(OPCODE_PRINT, out);
+            fputc((uint8_t)c, out);
+        }
         else {
             fprintf(stderr, "Unknown instruction on line %d: %s\n", lineno, s);
             return 1;
