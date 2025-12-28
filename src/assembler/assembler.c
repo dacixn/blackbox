@@ -4,13 +4,16 @@
 #include <string.h>
 #include <ctype.h>
 #include "../interpreter/opcodes.h"
+
 #define BCX_VERSION 1
+
 static char *trim(char *s) {
     while (isspace(*s)) s++;
     char *end = s + strlen(s) - 1;
     while (end >= s && isspace(*end)) *end-- = '\0';
     return s;
 }
+
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: %s input.bbx output.bcx\n", argv[0]);
@@ -45,6 +48,8 @@ int main(int argc, char *argv[]) {
             char c;
             if (sscanf(s + 5, " %d '%c'", &fd, &c) != 2) {
                 fprintf(stderr, "Syntax error on line %d: expected WRITE <fd> '<char>'\n", lineno);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             fputc(OPCODE_WRITE, out);
@@ -63,6 +68,8 @@ int main(int argc, char *argv[]) {
             char c;
             if (sscanf(s + 5, " '%c", &c) != 1) {
                 fprintf(stderr, "Syntax error on line %d\n", lineno);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             fputc(OPCODE_PRINT, out);
@@ -70,6 +77,8 @@ int main(int argc, char *argv[]) {
         }
         else {
             fprintf(stderr, "Unknown instruction on line %d: %s\n", lineno, s);
+            fclose(in);
+            fclose(out);
             return 1;
         }
 
