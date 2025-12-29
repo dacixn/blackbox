@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s program.bin\n", argv[0]);
         return 1;
     }
-    int32_t registers[NUM_REGISTERS] = {0};
+    int32_t registers[REGISTERS] = {0};
     int32_t stack[STACK_SIZE];
     size_t sp = 0;  
     FILE *f = fopen(argv[1], "rb");
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
                 uint8_t reg = program[pc++];
-                if (reg >= NUM_REGISTERS) {
+                if (reg >= REGISTERS) {
                     fprintf(stderr, "Invalid register %u\n", reg);
                     free(program);
                     return 1;
@@ -108,12 +108,60 @@ int main(int argc, char *argv[]) {
                 }
                 uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
-                if (src >= NUM_REGISTERS || dst >= NUM_REGISTERS) {
+                if (src >= REGISTERS || dst >= REGISTERS) {
                     fprintf(stderr, "Invalid register in ADD\n");
                     free(program);
                     return 1;
                 }
                 registers[dst] += registers[src];
+                break;
+            }
+            case OPCODE_SUB: {
+                if (pc + 2 >= size) {
+                    fprintf(stderr, "Missing operands for ADD\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t src = program[pc++];
+                uint8_t dst = program[pc++];
+                if (src >= REGISTERS || dst >= REGISTERS) {
+                    fprintf(stderr, "Invalid register in ADD\n");
+                    free(program);
+                    return 1;
+                }
+                registers[dst] -= registers[src];
+                break;
+            }
+            case OPCODE_MUL: {
+                if (pc + 2 >= size) {
+                    fprintf(stderr, "Missing operands for MUL\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t src = program[pc++];
+                uint8_t dst = program[pc++];
+                if (src >= REGISTERS || dst >= REGISTERS) {
+                    fprintf(stderr, "Invalid register in MUL\n");
+                    free(program);
+                    return 1;
+                }
+                registers[dst] *= registers[src];
+                break;
+            }
+            case OPCODE_DIV: {
+                if (pc + 2 >= size) {
+                    fprintf(stderr, "Missing operands for DIV\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t src = program[pc++];
+                uint8_t dst = program[pc++];
+                if (src >= REGISTERS || dst >= REGISTERS) {
+                    fprintf(stderr, "Invalid register in DIV\n");
+                    free(program);
+                    return 1;
+                }
+                registers[dst] /= registers[src];
                 break;
             }
 
@@ -125,7 +173,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 uint8_t reg = program[pc++];
-                if (reg >= NUM_REGISTERS) {
+                if (reg >= REGISTERS) {
                     fprintf(stderr, "Invalid register");
                     free(program);
                     return 1;
