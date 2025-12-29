@@ -7,10 +7,10 @@
 
 #define BCX_VERSION 1
 
-static char *trim(char *s) {
+char *trim(char *s) {
     while (isspace(*s)) s++;
     char *end = s + strlen(s) - 1;
-    while (end >= s && isspace(*end)) *end-- = '\0';
+    while (end >= s && (isspace(*end) || *end == '\r' || *end == '\n')) *end-- = '\0';
     return s;
 }
 
@@ -94,6 +94,43 @@ int main(int argc, char *argv[]) {
         else if (strcmp(s, "HALT") == 0) {
             fputc(OPCODE_HALT, out);
         }
+        else if (strncmp(s, "PRINT_REG", 9) == 0) {
+            char regname[8];
+
+            if (sscanf(s + 9, " %7s", regname) != 1) {
+                fprintf(stderr,
+                    "Syntax error on line %d: expected PRINT_REG <register>\n",
+                    lineno
+                );
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            for (int i = 0; regname[i]; i++) {
+                if (regname[i] == '\r' || regname[i] == '\n') {
+                    regname[i] = '\0';
+                    break;
+                }
+            }
+            uint8_t reg;
+            if      (strcmp(regname, "R0") == 0) reg = 0;
+            else if (strcmp(regname, "R1") == 0) reg = 1;
+            else if (strcmp(regname, "R2") == 0) reg = 2;
+            else if (strcmp(regname, "R3") == 0) reg = 3;
+            else if (strcmp(regname, "R4") == 0) reg = 4;
+            else if (strcmp(regname, "R5") == 0) reg = 5;
+            else if (strcmp(regname, "R6") == 0) reg = 6;
+            else if (strcmp(regname, "R7") == 0) reg = 7;
+            else {
+                fprintf(stderr, "Invalid register on line %d\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+
+            fputc(OPCODE_PRINTREG, out);
+            fputc(reg, out);
+        }
         else if (strncmp(s, "PRINT", 5) == 0) {
             char c;
             if (sscanf(s + 5, " '%c", &c) != 1) {
@@ -153,6 +190,10 @@ int main(int argc, char *argv[]) {
             fputc(OPCODE_POP, out);
             fputc(reg, out);
         }
+        else if (strncmp(s, "ADD", 3) == 0) {
+            
+        }
+        
         else {
             fprintf(stderr, "Unknown instruction on line %d: %s\n", lineno, s);
             fclose(in);

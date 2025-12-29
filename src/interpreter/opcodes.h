@@ -13,7 +13,7 @@
 #define OPCODE_SUB 0x07
 #define OPCODE_DUP 0x08
 #define OPCODE_SWAP 0x09
-#define OPCODE_PRINTREG 0x10
+#define OPCODE_PRINTREG 0x0A
 #define OPCODE_HALT  0xFF
 
 #endif

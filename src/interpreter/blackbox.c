@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: %s program.bin\n", argv[0]);
         return 1;
     }
-    int32_t registers[NUM_REGISTERS];
+    int32_t registers[NUM_REGISTERS] = {0};
     int32_t stack[STACK_SIZE];
     size_t sp = 0;  
     FILE *f = fopen(argv[1], "rb");
@@ -99,6 +99,40 @@ int main(int argc, char *argv[]) {
                 }
                 registers[reg] = stack[--sp];
                 printf("R0=%d R1=%d\n", registers[0], registers[1]);
+                break;
+            }
+            case OPCODE_ADD: {
+                if (pc + 2 >= size) {
+                    fprintf(stderr, "Missing operands for ADD\n");
+                    free(program);
+                    return 1;
+                }
+                uint8_t src = program[pc++];
+                uint8_t dst = program[pc++];
+                if (src >= NUM_REGISTERS || dst >= NUM_REGISTERS) {
+                    fprintf(stderr, "Invalid register in ADD\n");
+                    free(program);
+                    return 1;
+                }
+                registers[dst] += registers[src];
+                break;
+            }
+
+            case OPCODE_PRINTREG: {
+                if (pc >= size) {
+                    fprintf(stderr, "Missing operand for PRINT_REG\n");
+                    free(program);
+                    return 1;
+                }
+
+                uint8_t reg = program[pc++];
+                if (reg >= NUM_REGISTERS) {
+                    fprintf(stderr, "Invalid register");
+                    free(program);
+                    return 1;
+                }
+                printf("%d", registers[reg]);
+                fflush(stdout);
                 break;
             }
             case OPCODE_NEWLINE:
