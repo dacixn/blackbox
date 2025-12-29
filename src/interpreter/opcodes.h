@@ -16,6 +16,9 @@
 #define OPCODE_PRINTREG 0x0A
 #define OPCODE_MOV_IMM 0x0B
 #define OPCODE_MOV_REG 0x0C
+#define OPCODE_JMP 0x0D
+#define OPCODE_JZ  0x0E
+#define OPCODE_JNZ 0x0F
 #define OPCODE_HALT  0xFF
 
 #endif
