@@ -13,18 +13,21 @@ PUSH 10
 POP R1
 ADD R0, R1
 PRINT_REG R0 ;Result: 30
+
 ;Subtract operation
 NEWLINE
 PUSH 2
 POP R2
 SUB R0, R2
 PRINT_REG R0 ;Result: 28
+
 ;Multiply operation
 NEWLINE
 PUSH 2
 POP R2
 MUL R0, R2
 PRINT_REG R0 ;Result: 56
+
 ;Divide operation
 NEWLINE
 PUSH 2
