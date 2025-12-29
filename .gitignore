@@ -9,3 +9,5 @@ src/assembler/output.bcx
 *.bcx
 src/assembler/bbx-asm
 src/interpreter/bbx
+bbx
+bbx-asm
