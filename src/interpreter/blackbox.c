@@ -98,7 +98,6 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
                 registers[reg] = stack[--sp];
-                printf("R0=%d R1=%d\n", registers[0], registers[1]);
                 break;
             }
             case OPCODE_ADD: {

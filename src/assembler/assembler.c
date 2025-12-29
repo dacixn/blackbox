@@ -191,7 +191,63 @@ int main(int argc, char *argv[]) {
             fputc(reg, out);
         }
         else if (strncmp(s, "ADD", 3) == 0) {
-            
+            char src_reg[3];
+            char dst_reg[3];
+            if (sscanf(s + 3, " %2s , %2s", src_reg, dst_reg) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected ADD <src>, <dst>\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t src;
+            uint8_t dst;
+            if (strcmp(src_reg,"R0")==0) 
+                src=0;
+            else if (strcmp(src_reg,"R1")==0) 
+                src=1;
+            else if (strcmp(src_reg,"R2")==0) 
+                src=2;
+            else if (strcmp(src_reg,"R3")==0) 
+                src=3;
+            else if (strcmp(src_reg,"R4")==0) 
+                src=4;
+            else if (strcmp(src_reg,"R5")==0) 
+                src=5;
+            else if (strcmp(src_reg,"R6")==0) 
+                src=6;
+            else if (strcmp(src_reg,"R7")==0) 
+                src=7;
+            else {
+                fprintf(stderr, "Invalid source register on line %d\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            if (strcmp(dst_reg,"R0")==0) 
+                dst=0;
+            else if (strcmp(dst_reg,"R1")==0) 
+                dst=1;
+            else if (strcmp(dst_reg,"R2")==0) 
+                dst=2;
+            else if (strcmp(dst_reg,"R3")==0) 
+                dst=3;
+            else if (strcmp(dst_reg,"R4")==0) 
+                dst=4;
+            else if (strcmp(dst_reg,"R5")==0) 
+                dst=5;
+            else if (strcmp(dst_reg,"R6")==0) 
+                dst=6;
+            else if (strcmp(dst_reg,"R7")==0) 
+                dst=7;
+            else {
+                fprintf(stderr, "Invalid destination register on line %d\n", lineno);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            fputc(OPCODE_ADD, out);
+            fputc(src, out);
+            fputc(dst, out);
         }
         
         else {
