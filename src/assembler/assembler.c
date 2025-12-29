@@ -31,33 +31,27 @@ size_t instr_size(const char *line) {
     if (strncmp(line, "MOV", 3) == 0) {
         char dst[8], src[32];
 
-        // Skip "MOV" and optional spaces
         const char *p = line + 3;
         while (*p && isspace(*p)) p++;
 
-        // Find comma
         const char *comma = strchr(p, ',');
-        if (!comma) return 0; // invalid syntax
-
-        // Copy dst
+        if (!comma) return 0;
+\
         size_t len = comma - p;
         if (len >= sizeof(dst)) len = sizeof(dst) - 1;
         strncpy(dst, p, len);
         dst[len] = 0;
 
-        // Skip comma and spaces to get src
         p = comma + 1;
         while (*p && isspace(*p)) p++;
         strncpy(src, p, sizeof(src) - 1);
         src[sizeof(src)-1] = 0;
 
-        // Trim trailing whitespace/newline from src
         char *end = src + strlen(src) - 1;
         while (end >= src && isspace(*end)) *end-- = 0;
 
-        // Check if source is register
-        if (toupper(src[0]) == 'R') return 3;  // reg to reg
-        else return 6;                           // reg to immediate
+        if (toupper(src[0]) == 'R') return 3; 
+        else return 6;   
     }
     else if (strncmp(line, "PUSH", 4) == 0) return 5; 
     else if (strncmp(line, "POP", 3) == 0) return 2; 
