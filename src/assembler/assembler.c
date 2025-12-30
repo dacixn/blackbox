@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "../interpreter/opcodes.h"
+#include "../opcodes.h"
 
 #define BCX_VERSION 1
 

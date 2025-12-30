@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O2
 
 SRC = assembler.c
-HEADER = ../interpreter/opcodes.h
+HEADER = ../opcodes.h
 TARGET = bbx-asm
 
 .PHONY: all clean
