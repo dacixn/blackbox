@@ -27,6 +27,12 @@ size_t find_label(const char *name, Label *labels, size_t count) {
     fprintf(stderr, "Unknown label %s\n", name);
     exit(1);
 }
+void write_u32(FILE *out, uint32_t val) {
+    fputc((val >> 0) & 0xFF, out);
+    fputc((val >> 8) & 0xFF, out);
+    fputc((val >> 16) & 0xFF, out);
+    fputc((val >> 24) & 0xFF, out);
+}
 size_t instr_size(const char *line) {
     if (strncmp(line, "MOV", 3) == 0) {
         char dst[8], src[32];
@@ -36,7 +42,7 @@ size_t instr_size(const char *line) {
 
         const char *comma = strchr(p, ',');
         if (!comma) return 0;
-\
+
         size_t len = comma - p;
         if (len >= sizeof(dst)) len = sizeof(dst) - 1;
         strncpy(dst, p, len);
@@ -71,6 +77,8 @@ size_t instr_size(const char *line) {
     }
     else if (strncmp(line, "JMP", 3) == 0) return 5; 
     else if (strcmp(line, "NEWLINE") == 0) return 1;
+    else if (strncmp(line, "JZ", 2) == 0) return 6;
+    else if (strncmp(line, "JNZ", 3) == 0) return 6;    
     else if (strcmp(line, "HALT") == 0) return 1;
     return 0; 
 }
@@ -137,7 +145,7 @@ int main(int argc, char *argv[]) {
             continue;
         } 
         
-        pc+= instr_size(s);
+        pc += instr_size(s);
     }
     rewind(in);
     lineno = 0;
@@ -198,6 +206,36 @@ int main(int argc, char *argv[]) {
         else if (s[0] == '.') {
             continue;
         }
+        else if (strncmp(s, "JZ", 2) == 0) {
+            char regname[3];
+            char label[32];
+            if (sscanf(s + 2, " %2s, %31s", regname, label) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected JZ <register>, <label>\nGot: %s\n", lineno, s);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t src = parse_register(regname, lineno);
+            size_t addr = find_label(label, labels, label_count);
+            fputc(OPCODE_JZ, out);
+            fputc(src, out);
+            write_u32(out, addr);
+        }
+        else if (strncmp(s, "JNZ", 3) == 0) {
+            char regname[3];
+            char label[32];
+            if (sscanf(s + 3, " %2s, %31s", regname, label) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected JNZ <register>, <label>\nGot: %s\n", lineno, s);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t src = parse_register(regname, lineno);
+            size_t addr = find_label(label, labels, label_count);
+            fputc(OPCODE_JNZ, out);
+            fputc(src, out);
+            write_u32(out, addr);
+        }
 
         else if (strcmp(s, "HALT") == 0) {
             fputc(OPCODE_HALT, out);
@@ -206,10 +244,7 @@ int main(int argc, char *argv[]) {
             char regname[8];
 
             if (sscanf(s + 9, " %7s", regname) != 1) {
-                fprintf(stderr,
-                    "Syntax error on line %d: expected PRINT_REG <register>\n",
-                    lineno
-                );
+                fprintf(stderr, "Syntax error on line %d: expected PRINT_REG <register>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -230,7 +265,7 @@ int main(int argc, char *argv[]) {
             else if (strcmp(regname, "R6") == 0) reg = 6;
             else if (strcmp(regname, "R7") == 0) reg = 7;
             else {
-                fprintf(stderr, "Invalid register on line %d\n", lineno);
+                fprintf(stderr, "Invalid register on line %d\nGot: %s\n", lineno, regname);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -242,7 +277,7 @@ int main(int argc, char *argv[]) {
         else if (strncmp(s, "PRINT", 5) == 0) {
             char c;
             if (sscanf(s + 5, " '%c", &c) != 1) {
-                fprintf(stderr, "Syntax error on line %d\n", lineno);
+                fprintf(stderr, "Syntax error on line %d\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -253,7 +288,7 @@ int main(int argc, char *argv[]) {
         else if (strncmp(s, "JMP", 3) == 0) {
             char label_name[32];
             if (sscanf(s+3, " %31s", label_name) == 0) {
-                fprintf(stderr, "Syntax error on line %d: expected JMP <label>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected JMP <label>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -261,29 +296,23 @@ int main(int argc, char *argv[]) {
             size_t addr = find_label(label_name, labels, label_count);
             printf("JMP to %s (addr=%zu)\n", label_name, addr);
             fputc(OPCODE_JMP, out);
-            fputc((addr >> 0) & 0xFF, out);
-            fputc((addr >> 8) & 0xFF, out);
-            fputc((addr >> 16) & 0xFF, out);
-            fputc((addr >> 24) & 0xFF, out);
+            write_u32(out, addr);
         }
         else if (strncmp(s, "PUSH", 4) == 0) {
             int32_t value;
             if (sscanf(s+4, " %d", &value) != 1) {
-                fprintf(stderr, "Syntax error on line %d: expected PUSH <value>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected PUSH <value>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;   
             }
             fputc(OPCODE_PUSH, out);
-            fputc((value >> 0) & 0xFF, out);
-            fputc((value >> 8) & 0xFF, out);
-            fputc((value >> 16) & 0xFF, out);
-            fputc((value >> 24) & 0xFF, out);
+            write_u32(out, value);
         } 
         else if (strncmp(s, "POP", 3) == 0) {
             char regname[3];
             if (sscanf(s + 3, " %2s", regname) != 1) {
-                fprintf(stderr, "Syntax error on line %d: expected POP <register>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected POP <register>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -296,7 +325,7 @@ int main(int argc, char *argv[]) {
             char src_reg[3];
             char dst_reg[3];
             if (sscanf(s + 3, " %2s , %2s", dst_reg, src_reg) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected ADD <src>, <dst>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected ADD <src>, <dst>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -311,7 +340,7 @@ int main(int argc, char *argv[]) {
             char src_reg[3];
             char dst_reg[3];
             if (sscanf(s + 3, " %2s , %2s", dst_reg, src_reg) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected SUB <dst>, <src>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected SUB <dst>, <src>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -326,7 +355,7 @@ int main(int argc, char *argv[]) {
             char src_reg[3];
             char dst_reg[3];
             if (sscanf(s + 3, " %2s , %2s", dst_reg, src_reg) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected MUL <dst>, <src>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected MUL <dst>, <src>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -341,7 +370,7 @@ int main(int argc, char *argv[]) {
             char src_reg[3];
             char dst_reg[3];
             if (sscanf(s + 3, " %2s , %2s", dst_reg, src_reg) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected DIV <dst>, <src>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected DIV <dst>, <src>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -357,7 +386,7 @@ int main(int argc, char *argv[]) {
             char src[32];
 
             if (sscanf(s + 3, " %2s , %31s", dst_reg, src) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected MOV <dst>, <src>\n", lineno);
+                fprintf(stderr, "Syntax error on line %d: expected MOV <dst>, <src>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -373,15 +402,12 @@ int main(int argc, char *argv[]) {
                 int32_t imm = strtol(src, NULL, 0);
                 fputc(OPCODE_MOV_IMM, out);
                 fputc(dst, out);
-                fputc(imm & 0xFF, out);
-                fputc((imm >> 8) & 0xFF, out);
-                fputc((imm >> 16) & 0xFF, out);
-                fputc((imm >> 24) & 0xFF, out);
+                write_u32(out, imm);
             }
         }
         
         else {
-            fprintf(stderr, "Unknown instruction on line %d: %s\n", lineno, s);
+            fprintf(stderr, "Unknown instruction on line %d:\n %s\n", lineno, s);
             fclose(in);
             fclose(out);
             return 1;

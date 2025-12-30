@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Usage: %s program.bin\n", argv[0]);
+        printf("Usage: bbx program.bcx");
         return 1;
     }
     int32_t registers[REGISTERS] = {0};
@@ -46,12 +46,12 @@ int main(int argc, char *argv[]) {
                 uint8_t fd = program[pc++];
                 uint8_t len = program[pc++];
                 if (fd != 1 && fd != 2) {
-                    fprintf(stderr, "Error: invalid fd %u\n", fd);
+                    fprintf(stderr, "Error: invalid fd %lu at pc=%u\n", pc, fd);
                     free(program);
                     return 1;
                 }
                 if (pc + len > size) {
-                    fprintf(stderr, "Error: string past end of program\n");
+                    fprintf(stderr, "Error: string past end of program at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -65,12 +65,12 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_PUSH: {
                 if (pc + 3 >= size) {
-                    fprintf(stderr, "Missing operand for PUSH\n");
+                    fprintf(stderr, "Missing operand for PUSH at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 if (sp >= STACK_SIZE) {
-                    fprintf(stderr, "Stack overflow\n");
+                    fprintf(stderr, "Stack overflow at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -82,34 +82,72 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_POP: {
                 if (pc >= size) {
-                    fprintf(stderr, "Missing operand for POP\n");
+                    fprintf(stderr, "Missing operand for POP at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t reg = program[pc++];
                 if (reg >= REGISTERS) {
-                    fprintf(stderr, "Invalid register %u\n", reg);
+                    fprintf(stderr, "Invalid register %lu at pc=%u\n", pc, reg);
                     free(program);
                     return 1;
                 }
                 if (sp == 0) {
-                    fprintf(stderr, "Stack underflow\n");
+                    fprintf(stderr, "Stack underflow at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 registers[reg] = stack[--sp];
                 break;
             }
+            case OPCODE_JZ: {
+                if (pc + 4 >= size) {
+                    fprintf(stderr, "Missing operands for JZ at pc=%zu at pc=%zu\n", pc, pc);
+                    free(program);
+                    return 1;
+                }
+                uint8_t reg = program[pc++];
+                uint32_t addr = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+                pc += 4;
+                if (registers[reg] == 0) {
+                    if (addr >= size) {
+                        fprintf(stderr, "JZ address out of bounds: %u at pc=%zu\n", addr, pc);
+                        free(program);
+                        return 1;
+                    }
+                    pc = addr;
+                }
+                break;
+            }
+            case OPCODE_JNZ: {
+                if (pc + 4 >= size) {
+                    fprintf(stderr, "Missing operands for JNZ at pc=%zu at pc=%zu\n", pc, pc);
+                    free(program);
+                    return 1;
+                }
+                uint8_t reg = program[pc++];
+                uint32_t addr = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+                pc += 4;
+                if (registers[reg] != 0) {
+                    if (addr >= size) {
+                        fprintf(stderr, "JNZ address out of bounds: %u at pc=%zu\n", addr, pc);
+                        free(program);
+                        return 1;
+                    }
+                    pc = addr;
+                }
+                break;
+            }
             case OPCODE_ADD: {
                 if (pc + 2 >= size) {
-                    fprintf(stderr, "Missing operands for ADD\n");
+                    fprintf(stderr, "Missing operands for ADD at pc=%zu at pc=%zu\n", pc, pc);
                     free(program);
                     return 1;
                 }
                 uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in ADD\n");
+                    fprintf(stderr, "Invalid register in ADD at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -118,14 +156,14 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_SUB: {
                 if (pc + 2 >= size) {
-                    fprintf(stderr, "Missing operands for ADD\n");
+                    fprintf(stderr, "Missing operands for ADD at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in ADD\n");
+                    fprintf(stderr, "Invalid register in ADD at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -134,14 +172,14 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_MUL: {
                 if (pc + 2 >= size) {
-                    fprintf(stderr, "Missing operands for MUL\n");
+                    fprintf(stderr, "Missing operands for MUL at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in MUL\n");
+                    fprintf(stderr, "Invalid register in MUL at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -150,14 +188,19 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_DIV: {
                 if (pc + 2 >= size) {
-                    fprintf(stderr, "Missing operands for DIV\n");
+                    fprintf(stderr, "Missing operands for DIV at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in DIV\n");
+                    fprintf(stderr, "Invalid register in DIV at pc=%zu\n", pc);
+                    free(program);
+                    return 1;
+                }
+                if (registers[src] == 0) {
+                    fprintf(stderr, "Invalid: division by zero at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -167,7 +210,7 @@ int main(int argc, char *argv[]) {
 
             case OPCODE_PRINTREG: {
                 if (pc >= size) {
-                    fprintf(stderr, "Missing operand for PRINT_REG\n");
+                    fprintf(stderr, "Missing operand for PRINT_REG at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -184,14 +227,14 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_MOV_REG: {
                 if (pc + 2 >= size) {
-                    fprintf(stderr, "Missing operands for MOV_REG\n");
+                    fprintf(stderr, "Missing operands for MOV_REG at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t dst = program[pc++];
                 uint8_t src = program[pc++];
                 if (dst >= REGISTERS || src >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in MOV_REG\n");
+                    fprintf(stderr, "Invalid register in MOV_REG at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -200,13 +243,13 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_MOV_IMM: {
                 if (pc + 5 >= size) {
-                    fprintf(stderr, "Missing operands for MOV_IMM\n");
+                    fprintf(stderr, "Missing operands for MOV_IMM at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t dst = program[pc++];
                 if (dst >= REGISTERS) {
-                    fprintf(stderr, "Invalid register in MOV_IMM\n");
+                    fprintf(stderr, "Invalid register in MOV_IMM at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
@@ -217,40 +260,42 @@ int main(int argc, char *argv[]) {
             }
             case OPCODE_JMP: {
                 if (pc + 3 >= size) {
-                    fprintf(stderr, "Missing operand for JMP\n");
+                    fprintf(stderr, "Missing operand for JMP at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint32_t addr = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
                 pc = addr;
                 if (pc >= size) {
-                    fprintf(stderr, "JMP addr out of bounds: %u\n", addr);
+                    fprintf(stderr, "JMP addr out of bounds: %lu at pc=%u\n", pc, addr);
                     free(program);
                     return 1;
                 }
                 break;
             }
-            case OPCODE_NEWLINE:
+            case OPCODE_NEWLINE: {
                 putchar('\n'); 
                 break;
-            
-            case OPCODE_HALT:
+            }
+            case OPCODE_HALT: {
                 free(program);
                 return 0;
+            }
             case OPCODE_PRINT: {
                 if (pc >= size) {
-                    printf("Error: missing operand for PRINT\n");
+                    printf("Error: missing operand for PRINT at pc=%zu\n", pc);
                     free(program);
                     return 1;
                 }
                 uint8_t value = program[pc++];
                 putchar(value);
-                break;
+                break;  
             }
-            default:
-                printf("Unknown opcode 0x%02X at position %ld\n", opcode, pc - 1);
+            default: {
+                fprintf(stderr, "Unknown opcode 0x%02X at position %zu\n", opcode, pc - 1);
                 free(program);
                 return 1;
+            }
         }
     }
 
