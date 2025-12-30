@@ -2,7 +2,7 @@
 ### Info
 Syntax is Intel assembly-like (DST, SRC).\
 Labels start with a period (.) and end with a colon (:) (.label:)\
-The stack size is 16384 32-bit integers.\
+The stack size is 16384 32-bit integers, 64KB total.\
 The stack acts like virtual memory.\
 There are 9 registers from R0 to R8.
 ### Calls/Opcodes:
