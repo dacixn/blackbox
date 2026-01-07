@@ -2,7 +2,7 @@
 #define OPCODES_H
 
 #define MAGIC 0x626378
-#define STACK_SIZE 16777216
+#define STACK_SIZE 16384
 #define REGISTERS 99
 
 #define OPCODE_WRITE 0x01
@@ -24,6 +24,7 @@
 #define OPCODE_DEC 0x11
 #define OPCODE_PUSH_REG 0x12
 #define OPCODE_CMP 0x13
+#define OPCODE_ALLOC 0x14
 #define OPCODE_HALT  0xFF
 
 #endif

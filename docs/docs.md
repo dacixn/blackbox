@@ -2,10 +2,10 @@
 ### Info
 Syntax is Intel assembly-like (DST, SRC).\
 Labels start with a period (.) and end with a colon (:) (.label:)\
-The stack size is 16384 32-bit integers, 64KB total.\
-The stack acts like virtual memory.\
-There are 33 registers from R0 to R32, each can store a 32-bit integer.
-Register 8 (R8) is dedicated to CMP. 
+The interpreter now uses a heap-backed stack that is initially allocated with 16384 elements\
+Each stack element is a 64-bit integer (`int64_t`), so the initial heap allocation is 16384 × 8 = 131072 bytes (128 KiB).\
+The stack grows automatically when needed using a 1.5× growth policy. The interpreter also exposes an `ALLOC` opcode to explicitly reserve stack capacity.\
+There are 99 registers from R0-R98. The CMP flag/result is stored in `R98`.
 ### Calls/Opcodes:
 | Instruction | Description                              | Operands                     | Notes                                           |
 | ----------- | ---------------------------------------- | ---------------------------- | ----------------------------------------------- |
@@ -27,3 +27,4 @@ Register 8 (R8) is dedicated to CMP.
 | `INC`       | Increment register by one                | `<register>`                 | `<register> + 1`                                |
 | `DEC`       | Decrement register by one                | `<register>`                 | `<register> - 1`                                |
 | `CMP`       | Compare 2 registers                      | `<register>, <register>`     | Subtracts the registers, if bigger than 0, R8=1 |
+| `ALLOC`     | Reserve stack capacity (bytes)           | `<bytes>`                    | |
