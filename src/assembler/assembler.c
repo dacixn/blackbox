@@ -84,6 +84,7 @@ size_t instr_size(const char *line) {
         return 3 + str_len;
     }
     else if (strncmp(line, "JMP", 3) == 0) return 5; 
+    else if (strncmp(line, "ALLOC", 5) == 0) return 5;
     else if (strcmp(line, "NEWLINE") == 0) return 1;
     else if (strncmp(line, "JZ", 2) == 0) return 6;
     else if (strncmp(line, "JNZ", 3) == 0) return 6;
@@ -567,7 +568,28 @@ int main(int argc, char *argv[]) {
             fputc(r1, out);
             fputc(r2, out);
         }
-        
+        else if (strncmp(s, "ALLOC", 5) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char operand[32];
+            if (sscanf(s + 5, " %31s", operand) != 1) {
+                fprintf(stderr, "Syntax error on line %d: expected ALLOC <bytes>\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            char *end;
+            unsigned long bytes = strtoul(operand, &end, 0);
+            if (*end != '\0') {
+                fprintf(stderr, "Invalid ALLOC value on line %d: %s\n", lineno, operand);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            fputc(OPCODE_ALLOC, out);
+            write_u32(out, (uint32_t)bytes);
+        }
         else {
             fprintf(stderr, "Unknown instruction on line %d:\n %s\n", lineno, s);
             fclose(in);
