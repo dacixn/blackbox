@@ -61,13 +61,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    stack = malloc(stack_cap * sizeof *stack);
-    if (!stack) {
-        perror("malloc");
-        free(program);
-        return 1;
-    }
-
     size_t pc = 3;
 
     while (pc < size) {
