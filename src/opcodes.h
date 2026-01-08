@@ -25,6 +25,9 @@
 #define OPCODE_PUSH_REG 0x12
 #define OPCODE_CMP 0x13
 #define OPCODE_ALLOC 0x14
+#define OPCODE_LOAD 0x15
+#define OPCODE_STORE 0x16
+#define OPCODE_GROW 0x17
 #define OPCODE_HALT  0xFF
 
 #endif

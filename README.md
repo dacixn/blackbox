@@ -5,17 +5,18 @@
 | |_) | | (_| | (__|   <| |_) | (_) >  <
 |____/|_|\__,_|\___|_|\_\_.__/ \___/_/\_\
 ```
-
+### Overview
 A minimal, Turing-complete bytecode virtual machine written in C, featuring a custom assembly language and instruction set.
 
 The virtual machine executes a custom bytecode format produced from a simple assembly-like language.
-
-It uses Intel-style syntax. (register order dst, src), (.label:)
-
-This project explores low-level concepts such as instruction decoding, registers, stacks, and control flow, similar to how real CPUs operate.
-
+### Features
+- Small, portable VM written in C with a compact custom bytecode format.
+- 99 general-purpose registers (R0–R98).
+- Heap-backed int64_t stack with ALLOC/GROW instructions.
+- Straightforward Intel-like assembly and label-based control flow.
+- Minimal, easy-to-read codebase. Great for learning, embedding, or extending with new opcodes.
+- Deterministic, compact bytecode (small binaries, predictable behavior) Great for tests and reproducible demos.
 ### Docs
 See [docs.md](docs/docs.md) and [examples.md](docs/examples.md)
-
 ### Building
-Run `make` in the project directory on a Linux or macOS host.
+Run `make` in the project directory on any Unix-like host. (Linux, macOS, BSD family)

@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
         printf("Usage: bbx program.bcx");
         return 1;
     }
-    int32_t registers[REGISTERS] = {0};
+    int64_t registers[REGISTERS] = {0};
     size_t sp = 0;
     size_t stack_cap = STACK_SIZE;
     int64_t *stack = NULL;
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                printf("%d", registers[reg]);
+                printf("%lld", (long long)registers[reg]);
                 fflush(stdout);
                 break;
             }
@@ -449,11 +449,12 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                uint32_t bytes = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+
+                uint32_t elems = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
                 pc += 4;
-                size_t req = (bytes + sizeof *stack - 1) / sizeof *stack;
-                if (req > stack_cap) {
-                    int64_t *tmp = realloc(stack, req * sizeof *stack);
+
+                if (elems > stack_cap) {
+                    int64_t *tmp = realloc(stack, elems * sizeof *stack);
                     if (!tmp) {
                         perror("realloc");
                         free(program);
@@ -461,8 +462,85 @@ int main(int argc, char *argv[]) {
                         return 1;
                     }
                     stack = tmp;
-                    stack_cap = req;
+                    stack_cap = elems;
                 }
+                break;
+            }
+            case OPCODE_LOAD: {
+                if (pc + 5 >= size) {
+                    fprintf(stderr, "Missing operands for LOAD at pc=%zu\n", pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                uint8_t reg = program[pc++];
+                uint32_t addr = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+                pc += 4;
+                if (reg >= REGISTERS) {
+                    fprintf(stderr, "Invalid register in LOAD at pc=%zu\n", pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                if ((size_t)addr >= stack_cap) {
+                    fprintf(stderr, "LOAD address out of bounds: %u at pc=%zu\n", addr, pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                registers[reg] = stack[addr];
+                break;
+            }
+            case OPCODE_STORE: {
+                if (pc + 5 >= size) {
+                    fprintf(stderr, "Missing operands for STORE at pc=%zu\n", pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                uint8_t reg = program[pc++];
+                uint32_t addr = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+                pc += 4;
+                if (reg >= REGISTERS) {
+                    fprintf(stderr, "Invalid register in STORE at pc=%zu\n", pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                if ((size_t)addr >= stack_cap) {
+                    fprintf(stderr, "STORE address out of bounds: %u at pc=%zu\n", addr, pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                stack[addr] = registers[reg];
+                break;
+            }
+            case OPCODE_GROW: {
+                if (pc + 3 >= size) {
+                    fprintf(stderr, "Missing operand for GROW at pc=%zu\n", pc);
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+
+                uint32_t elem = program[pc] | (program[pc+1] << 8) | (program[pc+2] << 16) | (program[pc+3] << 24);
+                pc += 4;
+
+                if (elem == 0) 
+                    break;
+
+                size_t new_cap = stack_cap + elem;
+
+                int64_t *tmp = realloc(stack, new_cap * sizeof *stack);
+                if (!tmp) {
+                    perror("realloc");
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+                stack = tmp;
+                stack_cap = new_cap;
                 break;
             }
             default: {

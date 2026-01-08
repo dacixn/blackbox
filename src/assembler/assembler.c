@@ -91,6 +91,8 @@ size_t instr_size(const char *line) {
     else if (strncmp(line, "INC", 3) == 0) return 2;
     else if (strncmp(line, "DEC", 3) == 0) return 2;  
     else if (strncmp(line, "CMP", 3) == 0) return 3;
+    else if (strncmp(line, "STORE", 5) == 0) return 6;
+    else if (strncmp(line, "LOAD", 4) == 0) return 6;
     else if (strcmp(line, "HALT") == 0) return 1;
     return 0; 
 }
@@ -501,8 +503,8 @@ int main(int argc, char *argv[]) {
             char dst_reg[16];
             char src[16];
 
-            if (sscanf(s + 3, " %3s, %3s", dst_reg, src) != 2) {
-                fprintf(stderr, "Syntax error on line %d: expected MOV <dst>, <src>\nGot: %s\n", lineno, line);
+            if (sscanf(s + 3, " %3s, %15s", dst_reg, src) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected MOV <dst>, <src>\nGot: %s\n(If you're using a 2 character register like R1 or R2, use R01 or R02 instead!)\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -579,21 +581,65 @@ int main(int argc, char *argv[]) {
             }
             char operand[32];
             if (sscanf(s + 5, " %31s", operand) != 1) {
-                fprintf(stderr, "Syntax error on line %d: expected ALLOC <bytes>\nGot: %s\n", lineno, line);
+                fprintf(stderr, "Syntax error on line %d: expected ALLOC <elements>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
             }
-            char *end;
-            unsigned long bytes = strtoul(operand, &end, 0);
-            if (*end != '\0') {
-                fprintf(stderr, "Invalid ALLOC value on line %d: %s\n", lineno, operand);
-                fclose(in);
-                fclose(out);
-                return 1;
-            }
+            uint32_t num = strtoul(operand, NULL, 0);
             fputc(OPCODE_ALLOC, out);
-            write_u32(out, (uint32_t)bytes);
+            write_u32(out, num);
+        }
+        else if (strncmp(s, "LOAD", 4) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char regname[16];
+            char addrname[32];
+            if (sscanf(s + 4, " %3s, %31s", regname, addrname) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected LOAD <register>, <index in stack>\nGot: %s\n", lineno, s);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t reg = parse_register(regname, lineno);
+            uint32_t addr = strtoul(addrname, NULL, 0);
+            fputc(OPCODE_LOAD, out);
+            fputc(reg, out);
+            write_u32(out, addr);
+        }
+        else if (strncmp(s, "STORE", 5) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char regname[16];
+            char addrname[32];
+            if (sscanf(s + 5, " %3s, %31s", regname, addrname) != 2) {
+                fprintf(stderr, "Syntax error on line %d: expected STORE <register>, <index in stack>\nGot: %s\n", lineno, s);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t reg = parse_register(regname, lineno);
+            uint32_t addr = strtoul(addrname, NULL, 0);
+            fputc(OPCODE_STORE, out);
+            fputc(reg, out);
+            write_u32(out, addr);
+        }
+        else if (strncmp(s, "GROW", 4) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char operand[32];
+            if (sscanf(s + 4, " %31s", operand) != 1) {
+                fprintf(stderr, "Syntax error on line %d: expected GROW <additional elements>\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint32_t num = strtoul(operand, NULL, 0);
+            fputc(OPCODE_GROW, out);
+            write_u32(out, num);
         }
         else {
             fprintf(stderr, "Unknown instruction on line %d:\n %s\n", lineno, s);

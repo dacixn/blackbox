@@ -1,30 +1,66 @@
 # Blackbox documentation
 ### Info
-Syntax is Intel assembly-like (DST, SRC).\
-Labels start with a period (.) and end with a colon (:) (.label:)\
-The interpreter now uses a heap-backed stack that is initially allocated with 16384 elements\
-Each stack element is a 64-bit integer (`int64_t`), so the initial heap allocation is 16384 × 8 = 131072 bytes (128 KiB).\
-The stack grows automatically when needed using a 1.5× growth policy. The interpreter also exposes an `ALLOC` opcode to explicitly reserve stack capacity.\
-There are 99 registers from R0-R98. The CMP flag/result is stored in `R98`.
-### Calls/Opcodes:
-| Instruction | Description                              | Operands                     | Notes                                           |
-| ----------- | ---------------------------------------- | ---------------------------- | ----------------------------------------------- |
-| `WRITE`     | Write a string to a stream               | `<stream number> "<string>"` | `stream number = 1` for stdout, `2` for stderr  |
-| `NEWLINE`   | Prints a newline                         | None                         | Equivalent to `\n`                              |
-| `PRINT`     | Print a single character                 | `<char>`                     | Example: `PRINT 'A'`                            |
-| `PUSH`      | Push 32-bit integer or reg to the stack  | `<value or register>`        | Stack grows; check for overflow                 |
-| `POP`       | Pop the top of the stack into a register | `<register>`                 | Stack shrinks; check for underflow              |
-| `MOV`       | Move a value into a register             | `<dst>, <src>`               | `<src>` can be immediate or another register    |
-| `ADD`       | Add two registers                        | `<dst>, <src>`               | `dst = dst + src`                               |
-| `SUB`       | Subtract two registers                   | `<dst>, <src>`               | `dst = dst - src`                               |
-| `MUL`       | Multiply two registers                   | `<dst>, <src>`               | `dst = dst * src`                               |
-| `DIV`       | Divide two registers                     | `<dst>, <src>`               | `dst = dst / src`, division by zero is an error |
-| `PRINT_REG` | Print integer value of a register        | `<register>`                 | Outputs decimal number                          |
-| `JMP`       | Jump unconditionally                     | `<label>`                    | Sets PC to the label’s address                  |
-| `JZ`        | Jump if register is zero                 | `<register>, <label>`        | Conditional branch                              |
-| `JNZ`       | Jump if register is non-zero             | `<register>, <label>`        | Conditional branch                              |
-| `HALT`      | Stop program execution                   | None                         | Ends the program                                |
-| `INC`       | Increment register by one                | `<register>`                 | `<register> + 1`                                |
-| `DEC`       | Decrement register by one                | `<register>`                 | `<register> - 1`                                |
-| `CMP`       | Compare 2 registers                      | `<register>, <register>`     | Subtracts the registers, if bigger than 0, R8=1 |
-| `ALLOC`     | Reserve stack capacity (bytes)           | `<bytes>`                    | |
+- File magic: 3 bytes 0x62 0x63 0x78 ("bcx") at program start.
+- Syntax is Intel-assembly like: instructions use whitespace and commas (e.g. MOV R01, 42). Labels start with a period and end with a colon (.label:).
+- Registers: R0–R98 (99 total). CMP result/flag is stored in R98.
+- Stack: heap-backed array of int64_t elements. Initially 16384 elements (128MiB). Stack grows automatically using a 1.5× growth policy when needed. ALLOC resizes stack capacity (in elements). GROW increases capacity by the specified additional elements.
+- Immediate values encoded as 32-bit little-endian.
+
+### Instruction encodings
+- WRITE: Write a string to a stream  
+  - Syntax: WRITE <fd> "<string>"  
+  - Encoding: OPCODE_WRITE, 1 byte fd (1=stdout, 2=stderr), 1 byte length (max 255), then string bytes.  
+- NEWLINE: Print newline  
+  - Syntax: NEWLINE  
+  - Encoding: OPCODE_NEWLINE  
+- PRINT: Print single character  
+  - Syntax: PRINT '<char>'  
+  - Encoding: OPCODE_PRINT, 1 byte char  
+- PUSH: Push immediate or register onto the stack  
+  - Syntax: PUSH <value|register>  
+  - Encoding: OPCODE_PUSH_IMM + 4-byte signed immediate OR OPCODE_PUSH_REG + 1 byte register  
+- POP: Pop top of stack into a register  
+  - Syntax: POP <register>  
+  - Encoding: OPCODE_POP, 1 byte register  
+- MOV: Move value into register  
+  - Syntax: MOV <dst>, <src>  (src can be immediate or register)  
+  - Encoding: OPCODE_MOV_IMM, 1 byte dst, 4-byte immediate OR OPCODE_MOV_REG, 1 byte dst, 1 byte src  
+- ADD / SUB / MUL / DIV: Binary register ops  
+  - Syntax: <OP> <dst>, <src>  (per-assembler uses first operand = destination)  
+  - Encoding: OPCODE_*, 1 byte src, 1 byte dst  
+  - DIV: division by zero is an error (interpreter checks).  
+- PRINT_REG: Print integer value of a register (decimal, no newline)  
+  - Syntax: PRINT_REG <register>  
+  - Encoding: OPCODE_PRINTREG, 1 byte register  
+- JMP: Unconditional jump  
+  - Syntax: JMP <label>  
+  - Encoding: OPCODE_JMP, 4-byte address (little-endian)  
+- JZ / JNZ: Conditional jumps on register zero/non-zero  
+  - Syntax: JZ <register>, <label>  and  JNZ <register>, <label>  
+  - Encoding: OPCODE_JZ/OPCODE_JNZ, 1 byte register, 4-byte address  
+- INC / DEC: Increment / decrement register by one  
+  - Syntax: INC <register>  /  DEC <register>  
+  - Encoding: OPCODE_INC / OPCODE_DEC, 1 byte register  
+- CMP: Compare two registers  
+  - Syntax: CMP <reg1>, <reg2>  (computes reg2 - reg1)  
+  - Encoding: OPCODE_CMP, 1 byte reg1, 1 byte reg2  
+  - Result: R98 = 1 if reg2 > reg1, otherwise R98 = 0  
+- ALLOC: Reserve stack capacity (elements)  
+  - Syntax: ALLOC <elements>  
+  - Encoding: OPCODE_ALLOC, 4-byte unsigned count  
+  - Behavior: if requested elements > current capacity, interpreter resizes capacity to exactly that number.  
+- LOAD / STORE: Access stack by element index (int64_t elements)  
+  - Syntax: LOAD <register>, <index>  /  STORE <register>, <index>  
+  - Encoding: OPCODE_LOAD / OPCODE_STORE, 1 byte register, 4-byte index  
+  - Bounds: index must be < stack capacity. LOAD reads an int64_t into the register; STORE writes a register's int64_t to the stack index.  
+- GROW: Increase stack capacity by additional elements  
+  - Syntax: GROW <additional elements>  
+  - Encoding: OPCODE_GROW, 4-byte unsigned count  
+  - Behavior: increases capacity by the specified count (no-op if count == 0).  
+- HALT: Stop program execution  
+  - Syntax: HALT  
+  - Encoding: OPCODE_HALT
+
+### Notes / errors
+- The assembler enforces register names as R followed by a decimal index (0–98). Use zero-padded forms like R01 for single-digit registers when needed.
+- Immediate parsing supports C-style numeric literals (decimal, hex 0x, etc.).
