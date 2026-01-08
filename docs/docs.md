@@ -57,7 +57,7 @@
   - Encoding: OPCODE_LOAD / OPCODE_STORE, 1 byte register, 4-byte index  
   - Bounds: index must be < stack capacity. LOAD reads an int64_t into the register; STORE writes a register's int64_t to the stack index.  
 - GROW: Increase stack capacity by additional elements  
-  - Syntax: GROW <additional elements>  
+  - Syntax: GROW <elements>  
   - Encoding: OPCODE_GROW, 4-byte unsigned count  
   - Behavior: increases capacity by the specified count (no-op if count == 0).  
 - RESIZE: Resize stack to specified amount
