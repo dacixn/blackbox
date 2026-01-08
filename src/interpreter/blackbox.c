@@ -277,8 +277,8 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
+                uint8_t src = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
                     fprintf(stderr, "Invalid register in ADD at pc=%zu\n", pc);
                     free(program);
@@ -295,8 +295,8 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
+                uint8_t src = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
                     fprintf(stderr, "Invalid register in ADD at pc=%zu\n", pc);
                     free(program);
@@ -313,8 +313,8 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
+                uint8_t src = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
                     fprintf(stderr, "Invalid register in MUL at pc=%zu\n", pc);
                     free(program);
@@ -331,8 +331,8 @@ int main(int argc, char *argv[]) {
                     free(stack);
                     return 1;
                 }
-                uint8_t src = program[pc++];
                 uint8_t dst = program[pc++];
+                uint8_t src = program[pc++];
                 if (src >= REGISTERS || dst >= REGISTERS) {
                     fprintf(stderr, "Invalid register in DIV at pc=%zu\n", pc);
                     free(program);

@@ -93,6 +93,7 @@ size_t instr_size(const char *line) {
     else if (strncmp(line, "CMP", 3) == 0) return 3;
     else if (strncmp(line, "STORE", 5) == 0) return 6;
     else if (strncmp(line, "LOAD", 4) == 0) return 6;
+    else if (strncmp(line, "GROW", 4) == 0) return 5;
     else if (strcmp(line, "HALT") == 0) return 1;
     return 0; 
 }
@@ -439,8 +440,8 @@ int main(int argc, char *argv[]) {
             uint8_t dst = parse_register(dst_reg, lineno);
             uint8_t src = parse_register(src_reg, lineno);
             fputc(OPCODE_ADD, out);
-            fputc(src, out);
             fputc(dst, out);
+            fputc(src, out);
         }
         else if (strncmp(s, "SUB", 3) == 0) {
             if (debug) {
@@ -457,8 +458,8 @@ int main(int argc, char *argv[]) {
             uint8_t dst = parse_register(dst_reg, lineno);
             uint8_t src = parse_register(src_reg, lineno);
             fputc(OPCODE_SUB, out);
-            fputc(src, out);
             fputc(dst, out);
+            fputc(src, out);
         }
         else if (strncmp(s, "MUL", 3) == 0) {
             if (debug) {
@@ -475,8 +476,8 @@ int main(int argc, char *argv[]) {
             uint8_t dst = parse_register(dst_reg, lineno);
             uint8_t src = parse_register(src_reg, lineno);
             fputc(OPCODE_MUL, out);
-            fputc(src, out);
             fputc(dst, out);
+            fputc(src, out);
         }
         else if (strncmp(s, "DIV", 3) == 0) {
             if (debug) {
@@ -493,8 +494,8 @@ int main(int argc, char *argv[]) {
             uint8_t dst = parse_register(dst_reg, lineno);
             uint8_t src = parse_register(src_reg, lineno);
             fputc(OPCODE_DIV, out);
-            fputc(src, out);
             fputc(dst, out);
+            fputc(src, out);
         }
         else if (strncmp(s, "MOV", 3) == 0) {
             if (debug) {
@@ -563,7 +564,7 @@ int main(int argc, char *argv[]) {
             }
             char reg1[16];
             char reg2[16];
-            if (sscanf(s + 3, " %3s , %3s", reg1, reg2) != 2) {
+            if (sscanf(s + 3, " %3s, %3s", reg1, reg2) != 2) {
                 fprintf(stderr, "Syntax error on line %d: expected CMP <reg1>, <reg2>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
