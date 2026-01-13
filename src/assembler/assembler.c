@@ -572,6 +572,57 @@ int main(int argc, char *argv[]) {
             fputc(OPCODE_FREE, out);
             write_u32(out, num);
         }
+        else if (strncmp(s, "FOPEN", 5) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char filename[128];
+            char mode[4];
+            char fid[4];
+            if (sscanf(s + 5, " %3s, %3s, \"%127[^\"]\"", mode, fid, filename) != 3) {
+                fprintf(stderr, "Syntax error on line %d: expected FOPEN <mode>, <file_descriptor>, \"<filename>\"\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t mode_flag;
+            if (strcmp(mode, "r") == 0) {
+                mode_flag = 0;
+            } else if (strcmp(mode, "w") == 0) {
+                mode_flag = 1;
+            } else if (strcmp(mode, "a") == 0) {
+                mode_flag = 2;
+            } else {
+                fprintf(stderr, "Invalid mode on line %d: %s (expected r, w, or a)\n", lineno, mode);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            fputc(OPCODE_FOPEN, out);
+            fputc(mode_flag, out);
+            uint8_t fd = (uint8_t)strtoul(fid, NULL, 0); // TODO: fix
+            fputc(fd, out);
+            uint8_t fname_len = (uint8_t)strlen(filename);
+            fputc(fname_len, out);
+            for (uint8_t i = 0; i < fname_len; i++) {
+                fputc((uint8_t)filename[i], out);
+            }
+        }
+        else if (strncmp(s, "FCLOSE", 6) == 0) {
+            if (debug) {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char fid[4];
+            if (sscanf(s + 6, " %3s", fid) != 1) {
+                fprintf(stderr, "Syntax error on line %d: expected FCLOSE <file_descriptor>\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t fd = (uint8_t)strtoul(fid, NULL, 0); // TODO: fix
+            fputc(OPCODE_FCLOSE, out);
+            fputc(fd, out);
+        }
         else {
             fprintf(stderr, "Unknown instruction on line %d:\n %s\n", lineno, s);
             fclose(in);
