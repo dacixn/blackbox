@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../define.h"
 
 int main(int argc, char *argv[])
@@ -730,6 +731,7 @@ int main(int argc, char *argv[])
             uint8_t mode_str = program[pc++];
             uint8_t fd = program[pc++];
             uint8_t fname_len = program[pc++];
+
             if (fd >= FILE_DESCRIPTORS)
             {
                 fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
@@ -738,11 +740,19 @@ int main(int argc, char *argv[])
                 return 1;
             }
             if (fname_len == 0 || fname_len >= 255) {
-                fprintf(stderr, "Invalid filename %u at pc=%zu\n", fname_len, pc);
+                fprintf(stderr, "Invalid filename length %u at pc=%zu\n", fname_len, pc);
                 free(program);
                 free(stack);
                 return 1;
             }
+            if (pc + fname_len > size)
+            {
+                fprintf(stderr, "Filename past end of program at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+
             char fname[256];
             memcpy(fname, &program[pc], fname_len);
             fname[fname_len] = '\0';
@@ -762,6 +772,229 @@ int main(int argc, char *argv[])
                 free(stack);
                 return 1;
             }
+            if (fds[fd]) {
+                fclose(fds[fd]);
+                fds[fd] = NULL;
+            }
+
+            FILE *file = fopen(fname, mode);
+            if (!file) {
+                perror("fopen");
+                free(program);
+                free(stack);
+                return 1;
+            }
+            fds[fd] = file;
+            break;
+        }
+        case OPCODE_FCLOSE:
+        {
+            if (pc >= size)
+            {
+                fprintf(stderr, "Missing operand for FCLOSE at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (fds[fd]) {
+                fclose(fds[fd]);
+                fds[fd] = NULL;
+            }
+            break;
+        }
+        case OPCODE_FREAD: {
+            if (pc + 1 >= size)
+            {
+                fprintf(stderr, "Missing operands for FREAD at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            uint8_t reg = program[pc++];
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register %u at pc=%zu\n", reg, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (!fds[fd]) {
+                fprintf(stderr, "File descriptor %u not opened at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            int c = fgetc(fds[fd]);
+            if (c == EOF) {
+                if (feof(fds[fd])) {
+                    registers[reg] = -1;
+                } else {
+                    perror("fgetc");
+                    free(program);
+                    free(stack);
+                    return 1;
+                }
+            } else {
+                registers[reg] = (int64_t)c;
+            }
+            break;
+        }
+        case OPCODE_FWRITE_REG: {
+            if (pc + 1 >= size)
+            {
+                fprintf(stderr, "Missing operands for FWRITE_REG at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            uint8_t reg = program[pc++];
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register %u at pc=%zu\n", reg, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (!fds[fd]) {
+                fprintf(stderr, "File descriptor %u not opened at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            int val = (int)registers[reg];
+            if (fputc(val, fds[fd]) == EOF) {
+                perror("fputc");
+                free(program);
+                free(stack);
+                return 1;
+            }
+            break;
+        }
+        case OPCODE_FWRITE_IMM: {
+            if (pc + 4 >= size)
+            {
+                fprintf(stderr, "Missing operands for FWRITE_IMM at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            int32_t value = program[pc] | (program[pc + 1] << 8) | (program[pc + 2] << 16) | (program[pc + 3] << 24);
+            pc += 4;
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (!fds[fd]) {
+                fprintf(stderr, "File descriptor %u not opened at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (fputc(value, fds[fd]) == EOF) {
+                perror("fputc");
+                free(program);
+                free(stack);
+                return 1;
+            }
+            break;
+        }
+        case OPCODE_FSEEK_REG: {
+            if (pc + 1 >= size)
+            {
+                fprintf(stderr, "Missing operands for FSEEK_REG at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            uint8_t reg = program[pc++];
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register %u at pc=%zu\n", reg, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (!fds[fd]) {
+                fprintf(stderr, "File descriptor %u not opened at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (fseek(fds[fd], registers[reg], SEEK_SET) != 0) {
+                perror("fseek");
+                free(program);
+                free(stack);
+                return 1;
+            }
+            break;
+        }
+        case OPCODE_FSEEK_IMM: {
+            if (pc + 3 >= size)
+            {
+                fprintf(stderr, "Missing operands for FSEEK_IMM at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t fd = program[pc++];
+            int32_t offset = program[pc] | (program[pc + 1] << 8) | (program[pc + 2] << 16) | (program[pc + 3] << 24);
+            pc += 4;
+            if (fd >= FILE_DESCRIPTORS)
+            {
+                fprintf(stderr, "Invalid file descriptor %u at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (!fds[fd]) {
+                fprintf(stderr, "File descriptor %u not opened at pc=%zu\n", fd, pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (fseek(fds[fd], offset, SEEK_SET) != 0) {
+                perror("fseek");
+                free(program);
+                free(stack);
+                return 1;
+            }
+            break;
         }
         default:
         {

@@ -694,15 +694,17 @@ int main(int argc, char *argv[])
                 printf("[DEBUG] Encoding instruction: %s\n", s);
             }
             char filename[128];
-            char mode[4];
-            char fid[4];
-            if (sscanf(s + 5, " %3s, %3s, \"%127[^\"]\"", mode, fid, filename) != 3)
+            char mode_raw[8];
+            char fid_raw[8];
+            if (sscanf(s + 5, " %7[^,], %7[^,], \" %127[^\"]\"", mode_raw, fid_raw, filename) != 3)
             {
                 fprintf(stderr, "Syntax error on line %d: expected FOPEN <mode>, <file_descriptor>, \"<filename>\"\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
             }
+            char *mode = trim(mode_raw);
+            char *fid = trim(fid_raw);
             uint8_t mode_flag;
             if (strcmp(mode, "r") == 0)
             {
