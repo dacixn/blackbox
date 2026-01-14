@@ -7,6 +7,11 @@
 - Immediate values encoded as 32-bit little-endian.
 - File descriptors are referenced as F<n> in assembler source. Valid F<n> are 0..(FILE_DESCRIPTORS-1). The assembler validates descriptors via parse_file().
 - Filenames and written strings are limited to 255 bytes in the binary encoding (length stored in one byte).
+- All file reads/writes are raw binary (no text mode translation).
+- The assembler enforces register names as R followed by a decimal index (0–98). Use zero-padded forms like R01 for single-digit registers when needed.
+- File descriptors in assembler are specified as F<n> (e.g. F1). The assembler validates descriptor numbers.
+- Immediate parsing supports C-style numeric literals (decimal, hex 0x, etc.).
+- Assembler limits filenames to 255 bytes
 
 ### Instruction encodings
 - WRITE: Write a string to a stream  
@@ -84,21 +89,13 @@
 - FREAD: Read from a file into a register
   - Syntax (assembler): FREAD F<fd>, <reg>
   - Encoding: OPCODE_FREAD, 1 byte fd, 1 byte register
-  - Behavior: reads up to one element/byte (implementation detail depends on interpreter) and stores the result in the specified register; assembler/interpreter validate fd and reg.
-- FWRITE (register): Write integer/bytes from a register to a file
-  - Syntax: FWRITE F<fd>, <reg>
-  - Encoding: OPCODE_FWRITE_REG, 1 byte fd, 1 byte register
+  - Behavior: reads up to one element (8 bytes) and stores the result in the specified register; assembler/interpreter validate fd and reg.
+- FWRITE: Write integer/bytes from a register or immediate to a file
+  - Syntax: FWRITE F<fd>, <reg|imm>
+  - Encoding: OPCODE_FWRITE_REG or OPCODE_FWRITE_IMM, 1 byte fd, 1 byte register or 4-byte immediate
   - Behavior: writes the register's value/bytes to the file associated with fd.
-- FWRITE (immediate/string): Write immediate string/data to a file
-  - Syntax: FWRITE F<fd>, "<string>"
-  - Encoding: OPCODE_FWRITE_IMM, 1 byte fd, 1 byte length, then string bytes
 - FSEEK (register / immediate): Seek file position
-  - Syntax: FSEEK F<fd>, <reg>   OR   FSEEK F<fd>, <imm>
-  - Encoding: OPCODE_FSEEK_REG, 1 byte fd, 1 byte reg  OR  OPCODE_FSEEK_IMM, 1 byte fd, 4-byte offset
+  - Syntax: FSEEK F<fd>, <reg|imm>
+  - Encoding: OPCODE_FSEEK_REG, 1 byte fd, 1 byte reg or OPCODE_FSEEK_IMM, 1 byte fd, 4-byte offset
   - Behavior: sets file position for fd; interpreter validates fd and range.
 
-### Notes / errors
-- The assembler enforces register names as R followed by a decimal index (0–98). Use zero-padded forms like R01 for single-digit registers when needed.
-- File descriptors in assembler are specified as F<n> (e.g. F1). The assembler validates descriptor numbers.
-- Immediate parsing supports C-style numeric literals (decimal, hex 0x, etc.).
-- Assembler limits string lengths in binary to 255 bytes.
