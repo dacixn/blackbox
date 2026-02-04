@@ -76,7 +76,6 @@ int main(int argc, char *argv[])
     char string_data[8192];
 
     int current_section = 0;
-    int found_string_section = 0;
     int found_code_section = 0;
 
     while (fgets(line, sizeof(line), in))
@@ -95,7 +94,6 @@ int main(int argc, char *argv[])
                 return 1;
             }
             current_section = 1;
-            found_string_section = 1;
             if (debug)
                 printf("[DEBUG] Entering string section at line %d\n", lineno);
             continue;
@@ -329,7 +327,13 @@ int main(int argc, char *argv[])
             fputc(OPCODE_PRINT_STR, out);
             fputc(reg, out);
         }
-        
+        else if (strncmp(s, "CONTINUE", 8) == 0)
+        {
+            if (debug)
+            {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+        }
         else if (strcmp(s, "NEWLINE") == 0)
         {
             if (debug)
