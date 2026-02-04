@@ -1,0 +1,21 @@
+; Define strings in the data section (these must come before code)
+STR $greeting, "Hello, World!"
+STR $prompt, "Enter your name: "
+STR $result, "The answer is: "
+
+; Code section
+LOADSTR $greeting, R01   ; Load string offset into R01
+PRINT_STR R01            ; Print "Hello, World!"
+NEWLINE
+
+LOADSTR $prompt, R02     ; Load another string
+PRINT_STR R02            ; Print "Enter your name: "
+
+; You can also do math and print results
+MOV R10, 42
+LOADSTR $result, R03
+PRINT_STR R03            ; Print "The answer is: "
+PRINT_REG R10            ; Print "42"
+NEWLINE
+
+HALT
