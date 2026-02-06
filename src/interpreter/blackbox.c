@@ -1046,32 +1046,34 @@ int main(int argc, char *argv[])
             registers[reg] = (int64_t)offset;
             break;
         }
-        case OPCODE_PRINT_STR:
-        {
-            if (pc >= size)
-            {
-                fprintf(stderr, "Missing operand for PRINT_STR at pc=%zu\n", pc);
-                free(program);
-                free(stack);
+        case OPCODE_PRINTSTR: {
+            if (pc >= size) {
+                fprintf(stderr, "Missing operand for PRINTSTR at pc=%zu\n", pc);
+                free(program); free(stack);
                 return 1;
             }
             uint8_t reg = program[pc++];
-            if (reg >= REGISTERS)
-            {
-                fprintf(stderr, "Invalid register in PRINT_STR at pc=%zu\n", pc);
-                free(program);
-                free(stack);
+            if (reg >= REGISTERS) {
+                fprintf(stderr, "Invalid register in PRINTSTR at pc=%zu\n", pc);
+                free(program); free(stack);
                 return 1;
             }
-            uint32_t offset = (uint32_t)registers[reg];
-            if (offset >= string_table_size)
-            {
-                fprintf(stderr, "String offset out of bounds: %u at pc=%zu\n", offset, pc);
-                free(program);
-                free(stack);
-                return 1;
+            
+            uint32_t addr = (uint32_t)registers[reg];
+            
+            if (addr & 0x80000000) {
+                uint32_t idx = addr & 0x7FFFFFFF;
+                while (idx < sp && stack[idx] != 0) {
+                    putchar((int)stack[idx++]);
+                }
+            } else {
+                if (addr >= string_table_size) {
+                    fprintf(stderr, "String offset out of bounds: %u at pc=%zu\n", addr, pc);
+                    free(program); free(stack);
+                    return 1;
+                }
+                printf("%s", (char *)(string_table + addr));
             }
-            printf("%s", (char *)(string_table + offset));
             fflush(stdout);
             break;
         }
@@ -1152,7 +1154,44 @@ int main(int argc, char *argv[])
             registers[dst] = registers[dst] ^ registers[src];
             break;
         }
-
+        case OPCODE_READSTR: {
+            if (pc >= size) {
+                fprintf(stderr, "Missing operand for READSTR at pc=%zu\n", pc);
+                free(program); free(stack);
+                return 1;
+            }
+            uint8_t reg = program[pc++];
+            if (reg >= REGISTERS) {
+                fprintf(stderr, "Invalid register in READSTR at pc=%zu\n", pc);
+                free(program); free(stack);
+                return 1;
+            }
+            
+            uint32_t start_addr = sp | 0x80000000;
+            
+            int c;
+            while ((c = getchar()) != EOF && c != '\n') {
+                if (sp >= stack_cap) {
+                    size_t new_cap = stack_cap + stack_cap / 2;
+                    int64_t *tmp = realloc(stack, new_cap * sizeof *stack);
+                    if (!tmp) { perror("realloc"); free(program); free(stack); return 1; }
+                    stack = tmp;
+                    stack_cap = new_cap;
+                }
+                stack[sp++] = c;
+            }
+            if (sp >= stack_cap) {
+                size_t new_cap = stack_cap + stack_cap / 2;
+                int64_t *tmp = realloc(stack, new_cap * sizeof *stack);
+                if (!tmp) { perror("realloc"); free(program); free(stack); return 1; }
+                stack = tmp;
+                stack_cap = new_cap;
+            }
+            stack[sp++] = 0;
+            
+            registers[reg] = start_addr;
+            break;
+        }
         default:
         {
             fprintf(stderr, "Unknown opcode 0x%02X at position %zu\n", opcode, pc - 1);

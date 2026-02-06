@@ -1,0 +1,11 @@
+%asm
+%string
+    STR $prompt, "Enter your name: "
+%main
+    LOADSTR $prompt, R01
+    PRINTSTR R01
+    READSTR R00          ; Read user input, store the pointer in R00
+    WRITE 1 "Hello, "
+    PRINTSTR R00         ; Print what user typed
+    NEWLINE
+    HALT

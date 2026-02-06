@@ -6,14 +6,17 @@
 #include "../define.h"
 #include "tools.h"
 
-int assemble_file(const char *filename, const char *output_file, int debug) {
+int assemble_file(const char *filename, const char *output_file, int debug)
+{
     FILE *in = fopen(filename, "rb");
-    if (!in) {
+    if (!in)
+    {
         perror("fopen input");
         return 1;
     }
     FILE *out = fopen(output_file, "wb");
-    if (!out) {
+    if (!out)
+    {
         perror("fopen output");
         fclose(in);
         return 1;
@@ -22,13 +25,18 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
     char line[256];
     int lineno = 0;
 
-    while (fgets(line, sizeof(line), in)) {
+    while (fgets(line, sizeof(line), in))
+    {
         lineno++;
         char *s = trim(line);
-        if (*s == '\0' || *s == ';') continue;
-        if (strcmp(s, "%asm") == 0) {
-            break; 
-        } else {
+        if (*s == '\0' || *s == ';')
+            continue;
+        if (strcmp(s, "%asm") == 0)
+        {
+            break;
+        }
+        else
+        {
             fprintf(stderr, "Error: file must start with %%asm (line %d)\n", lineno);
             fclose(in);
             fclose(out);
@@ -60,7 +68,8 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (found_code_section)
             {
                 fprintf(stderr, "Error on line %d: %%string section must come before %%main/%%entry\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             current_section = 1;
@@ -82,7 +91,8 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (current_section != 1)
             {
                 fprintf(stderr, "Error on line %d: STR must be inside %%string section\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             char name[32];
@@ -90,7 +100,8 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (!quote_start || sscanf(s + 4, " $%31[^,]", name) != 1)
             {
                 fprintf(stderr, "Syntax error line %d: expected STR $name, \"value\"\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             quote_start++;
@@ -98,21 +109,22 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (!quote_end)
             {
                 fprintf(stderr, "Syntax error line %d: missing closing quote\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             size_t len = quote_end - quote_start;
-            
+
             snprintf(strings[string_count].name, sizeof(strings[string_count].name), "%s", name);
             strings[string_count].offset = string_table_size;
-            
+
             memcpy(string_data + string_table_size, quote_start, len);
-            string_data[string_table_size + len] = '\0'; 
+            string_data[string_table_size + len] = '\0';
             string_table_size += len + 1;
             string_count++;
-            
+
             if (debug)
-                printf("[DEBUG] String $%s at offset %u\n", name, strings[string_count-1].offset);
+                printf("[DEBUG] String $%s at offset %u\n", name, strings[string_count - 1].offset);
             continue;
         }
 
@@ -122,13 +134,15 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (s[0] == '.' && s[len - 1] == ':')
             {
                 fprintf(stderr, "Error on line %d: labels must be inside %%main/%%entry section\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             if (current_section == 0)
             {
                 fprintf(stderr, "Error on line %d: code outside of section. Use %%string or %%main/%%entry\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             continue;
@@ -167,13 +181,13 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
         fclose(out);
         return 1;
     }
-    
+
     uint32_t header_offset = 4 + string_table_size;
     for (size_t i = 0; i < label_count; i++)
     {
         labels[i].addr += header_offset;
     }
-    
+
     rewind(in);
     lineno = 0;
     current_section = 0;
@@ -270,7 +284,8 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (sscanf(s + 7, " $%31[^,], %15s", name, regname) != 2)
             {
                 fprintf(stderr, "Syntax error line %d: expected LOADSTR $name, <register>\n", lineno);
-                fclose(in); fclose(out);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             uint32_t offset = find_string(name, strings, string_count);
@@ -281,19 +296,20 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             if (debug)
                 printf("[DEBUG] LOADSTR $%s (offset=%u) -> %s\n", name, offset, regname);
         }
-        else if (strncmp(s, "PRINT_STR", 9) == 0)
+        else if (strncmp(s, "PRINTSTR", 8) == 0)
         {
             if (debug)
                 printf("[DEBUG] Encoding instruction: %s\n", s);
             char regname[16];
-            if (sscanf(s + 9, " %15s", regname) != 1)
+            if (sscanf(s + 8, " %15s", regname) != 1)
             {
-                fprintf(stderr, "Syntax error line %d: expected PRINT_STR <register>\n", lineno);
-                fclose(in); fclose(out);
+                fprintf(stderr, "Syntax error line %d: expected PRINTSTR <register>\n", lineno);
+                fclose(in);
+                fclose(out);
                 return 1;
             }
             uint8_t reg = parse_register(regname, lineno);
-            fputc(OPCODE_PRINT_STR, out);
+            fputc(OPCODE_PRINTSTR, out);
             fputc(reg, out);
         }
         else if (strncmp(s, "CONTINUE", 8) == 0)
@@ -1040,7 +1056,8 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             fputc(r1, out);
             fputc(r2, out);
         }
-        else if (strncmp(s, "OR", 2) == 0) {
+        else if (strncmp(s, "OR", 2) == 0)
+        {
             if (debug)
             {
                 printf("[DEBUG] Encoding instruction: %s\n", s);
@@ -1080,6 +1097,34 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             fputc(OPCODE_XOR, out);
             fputc(r1, out);
             fputc(r2, out);
+        }
+        else if (strncmp(s, "READSTR", 7) == 0)
+        {
+            if (debug)
+            {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char regname[16];
+
+            if (sscanf(s + 7, " %7s", regname) != 1)
+            {
+                fprintf(stderr, "Syntax error on line %d: expected READSTR <register>\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            for (int i = 0; regname[i]; i++)
+            {
+                if (regname[i] == '\r' || regname[i] == '\n')
+                {
+                    regname[i] = '\0';
+                    break;
+                }
+            }
+            uint8_t reg = parse_register(regname, lineno);
+
+            fputc(OPCODE_READSTR, out);
+            fputc(reg, out);
         }
         else
         {

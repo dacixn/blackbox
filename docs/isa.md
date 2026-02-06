@@ -1,0 +1,115 @@
+# Blackbox VM Instruction Set Architecture
+- WRITE: Write a string to a stream  
+  - Syntax: WRITE <fd> "<string>"  
+  - Encoding: OPCODE_WRITE, 1 byte fd (1=stdout, 2=stderr), 1 byte length (max 255), then string bytes.  
+- NEWLINE: Print newline  
+  - Syntax: NEWLINE  
+  - Encoding: OPCODE_NEWLINE  
+- PRINT: Print single character  
+  - Syntax: PRINT '<char>'  
+  - Encoding: OPCODE_PRINT, 1 byte char  
+- PUSH: Push immediate or register onto the stack  
+  - Syntax: PUSH <value|register>  
+  - Encoding: OPCODE_PUSH_IMM + 4-byte signed immediate OR OPCODE_PUSH_REG + 1 byte register  
+- POP: Pop top of stack into a register  
+  - Syntax: POP <register>  
+  - Encoding: OPCODE_POP, 1 byte register  
+- MOV: Move value into register  
+  - Syntax: MOV <dst>, <src>  (src can be immediate or register)  
+  - Encoding: OPCODE_MOV_IMM, 1 byte dst, 4-byte immediate OR OPCODE_MOV_REG, 1 byte dst, 1 byte src  
+- ADD / SUB / MUL / DIV: Binary register ops  
+  - Syntax: <OP> <dst>, <src>  (first operand = destination)  
+  - Encoding: OPCODE_*, 1 byte dst, 1 byte src  
+  - DIV: division by zero is an error (interpreter checks).  
+- PRINT_REG: Print integer value of a register (decimal, no newline)  
+  - Syntax: PRINT_REG <register>  
+  - Encoding: OPCODE_PRINTREG, 1 byte register  
+- PRINT_STACKSIZE: Print the current stack capacity (in elements)
+  - Syntax: PRINT_STACKSIZE
+  - Encoding: OPCODE_PRINT_STACKSIZE
+- JMP: Unconditional jump  
+  - Syntax: JMP <label>  
+  - Encoding: OPCODE_JMP, 4-byte address (little-endian)  
+- JZ / JNZ: Conditional jumps on register zero/non-zero  
+  - Syntax: JZ <register>, <label>  and  JNZ <register>, <label>  
+  - Encoding: OPCODE_JZ/OPCODE_JNZ, 1 byte register, 4-byte address  
+- INC / DEC: Increment / decrement register by one  
+  - Syntax: INC <register>  /  DEC <register>  
+  - Encoding: OPCODE_INC / OPCODE_DEC, 1 byte register  
+- CMP: Compare two registers  
+  - Syntax: CMP <reg1>, <reg2>  (computes reg2 - reg1)  
+  - Encoding: OPCODE_CMP, 1 byte reg1, 1 byte reg2  
+  - Result: R98 = 1 if reg2 > reg1, otherwise R98 = 0  
+- ALLOC: Ensure stack capacity (elements)  
+  - Syntax: ALLOC <elements>  
+  - Encoding: OPCODE_ALLOC, 4-byte unsigned count  
+  - Behavior: if requested elements > current capacity, interpreter resizes capacity to exactly that number.  
+- LOAD / STORE: Access stack by element index (int64_t elements)  
+  - Syntax: LOAD <register>, <index>  /  STORE <register>, <index>  
+  - Encoding: OPCODE_LOAD / OPCODE_STORE, 1 byte register, 4-byte index  
+  - Bounds: index must be < stack capacity. LOAD reads an int64_t into the register; STORE writes a register's int64_t to the stack index.  
+- GROW: Increase stack capacity by additional elements  
+  - Syntax: GROW <elements>  
+  - Encoding: OPCODE_GROW, 4-byte unsigned count  
+  - Behavior: increases capacity by the specified count (no-op if count == 0).  
+- RESIZE: Resize stack to specified amount
+  - Syntax: RESIZE <elements>
+  - Encoding: OPCODE_RESIZE, 4-byte unsigned count
+  - Behavior: Resizes stack to specified amount. If SP (stack pointer) is greater than the new capacity, SP will be clamped to the new capacity.
+- FREE: Reduce the stack capacity by specified amount
+  - Syntax: FREE <elements>
+  - Encoding: OPCODE_FREE, 4-byte unsigned count
+  - Behavior: Decreases the stack capacity by the specified amount (interpreter adjusts backing buffer accordingly).
+- HALT: Stop program execution  
+  - Syntax: HALT  
+  - Encoding: OPCODE_HALT
+- FOPEN: Open a file into a descriptor
+  - Syntax: FOPEN <mode>, F<fd>, "<filename>"  (mode typically ''r' or 'w'')
+  - Encoding: OPCODE_FOPEN, 1 byte fd, 1 byte name-length, then filename bytes
+  - Behavior: interpreter opens the named file and stores the FILE* in the fds table at index fd. Mode determines fopen flags.
+- FCLOSE: Close an open file
+  - Syntax: FCLOSE F<fd>
+  - Encoding: OPCODE_FCLOSE, 1 byte fd
+  - Behavior: interpreter closes fds[fd] and clears the slot.
+- FREAD: Read from a file into a register
+  - Syntax (assembler): FREAD F<fd>, <reg>
+  - Encoding: OPCODE_FREAD, 1 byte fd, 1 byte register
+  - Behavior: reads up to one element (8 bytes) and stores the result in the specified register; assembler/interpreter validate fd and reg.
+- FWRITE: Write integer/bytes from a register or immediate to a file
+  - Syntax: FWRITE F<fd>, <reg|imm>
+  - Encoding: OPCODE_FWRITE_REG or OPCODE_FWRITE_IMM, 1 byte fd, 1 byte register or 4-byte immediate
+  - Behavior: writes the register's value/bytes to the file associated with fd.
+- FSEEK (register / immediate): Seek file position
+  - Syntax: FSEEK F<fd>, <reg|imm>
+  - Encoding: OPCODE_FSEEK_REG, 1 byte fd, 1 byte reg or OPCODE_FSEEK_IMM, 1 byte fd, 4-byte offset
+  - Behavior: sets file position for fd; interpreter validates fd and range.
+- STR: Define variable with the string datatype  (Must be in $string)
+  - Syntax: STR $<name>, "<contents>"
+  - Encoding: in the string table
+  - Behavior: Adds an entry to the string table
+- LOADSTR: Load a string into a register
+  - Syntax: LOADSTR $<name>, <register>
+  - Behavior: Writes the address of a string to a register
+- PRINTSTR: Prints a string
+  - Syntax: PRINTSTR <register>
+  - Behavior: Prints the string at the address the register points to
+- NOT: Bitwise NOT  
+  - Syntax: `NOT <register>`  
+  - Encoding: `OPCODE_NOT`, 1 byte register  
+  - Behavior: logical NOT - flips all bits of the register
+- AND: Bitwise AND  
+  - Syntax: `AND <dst>, <src>`  
+  - Encoding: `OPCODE_AND`, 1 byte dst, 1 byte src  
+  - Behavior: bitwise AND - computes `dst = dst & src`.  
+- OR: Bitwise OR  
+  - Syntax: `OR <dst>, <src>`  
+  - Encoding: `OPCODE_OR`, 1 byte dst, 1 byte src  
+  - Behavior: bitwise OR - computes `dst = dst | src`.  
+- XOR: Bitwise XOR  
+  - Syntax: `XOR <dst>, <src>`  
+  - Encoding: `OPCODE_XOR`, 1 byte dst, 1 byte src  
+  - Behavior: bitwise XOR - computes `dst = dst ^ src`.
+- READSTR: Read string from stdin
+  - Syntax: `READSTR <register>
+  - Encoding: `OPCODE_READSTR`, 1 byte register
+  - Behavior: Reads characters from stdin until newline or EOF, writes each byte into the stack, and stores the stack address to a register. 
