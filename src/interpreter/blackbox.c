@@ -1092,7 +1092,7 @@ int main(int argc, char *argv[])
                 free(stack);
                 return 1;
             }
-            registers[reg] = !registers[reg];
+            registers[reg] = ~registers[reg];
             break;
         }
         case OPCODE_AND:
