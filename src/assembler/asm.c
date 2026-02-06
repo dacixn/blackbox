@@ -103,7 +103,7 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
             }
             size_t len = quote_end - quote_start;
             
-            strncpy(strings[string_count].name, name, 31);
+            snprintf(strings[string_count].name, sizeof(strings[string_count].name), "%s", name);
             strings[string_count].offset = string_table_size;
             
             memcpy(string_data + string_table_size, quote_start, len);
@@ -162,7 +162,7 @@ int assemble_file(const char *filename, const char *output_file, int debug) {
 
     if (!found_code_section)
     {
-        fprintf(stderr, "Error: missing %main or %entry section\n");
+        fprintf(stderr, "Error: missing %%main or %%entry section\n");
         fclose(in);
         fclose(out);
         return 1;
