@@ -1428,7 +1428,7 @@ int main(int argc, char *argv[])
                 registers[reg] = (int64_t)v;
             break;
         }
-        efault:
+        default:
         {
             fprintf(stderr, "Unknown opcode 0x%02X at position %zu\n", opcode, pc - 1);
             free(program);
