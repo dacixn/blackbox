@@ -208,6 +208,8 @@ size_t instr_size(const char *line)
     }
     else if (strncmp(line, "GETKEY", 6) == 0)
         return 2;
+    else if (strncmp(line, "READ", 4) == 0)
+        return 2;
     fprintf(stderr, "Unknown instruction for size calculation: %s\n", line);
     exit(1);
 }

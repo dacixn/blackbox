@@ -42,7 +42,7 @@
   - Result: R98 = 1 if reg2 > reg1, otherwise R98 = 0  
 - ALLOC: Ensure stack capacity (elements)  
   - Syntax: ALLOC <elements>  
-  - Encoding: OPCODE_ALLOC, 4-byte unsigned count  
+  - Encoding: OPCODE_ALLOC, 4-byte unsigned count  g
   - Behavior: if requested elements > current capacity, interpreter resizes capacity to exactly that number.  
 - LOAD / STORE: Access stack by element index (int64_t elements)  
   - Syntax: LOAD <register>, <index>  /  STORE <register>, <index>  

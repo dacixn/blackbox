@@ -46,6 +46,7 @@
 #define OPCODE_OR 0x2C
 #define OPCODE_NOT 0x2D
 #define OPCODE_READSTR 0x2E
+#define OPCODE_READ 0x33
 #define OPCODE_SLEEP 0x2F
 
 #define OPCODE_CLRSCR 0x30

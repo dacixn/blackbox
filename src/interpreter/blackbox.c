@@ -1290,7 +1290,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
             system("cls");
 #else
-            printf("\x1b[2J\x1b[H", stdout);
+            fputs("\x1b[2J\x1b[H", stdout);
             fflush(stdout);
 #endif
             break;
@@ -1403,7 +1403,32 @@ int main(int argc, char *argv[])
 #endif
             break;
         }
-        default:
+        case OPCODE_READ:
+        {
+            if (pc >= size)
+            {
+                fprintf(stderr, "Missing operand for READ at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t reg = program[pc++];
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register in READ at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+
+            long long v;
+            if (scanf("%lld", &v) != 1)
+                registers[reg] = 0;
+            else
+                registers[reg] = (int64_t)v;
+            break;
+        }
+        efault:
         {
             fprintf(stderr, "Unknown opcode 0x%02X at position %zu\n", opcode, pc - 1);
             free(program);
