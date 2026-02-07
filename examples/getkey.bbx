@@ -1,0 +1,32 @@
+%asm
+; demonstrates GETKEY non-blocking instruction
+%strings
+    STR $prompt, "Press a key (or wait briefly)..."
+    STR $no_key, "No key pressed"
+    STR $got, "Got key: "
+
+%main
+    LOADSTR $prompt, R01
+    PRINTSTR R01
+    NEWLINE
+
+.wait:
+    GETKEY R00
+    MOV R01, R00
+    INC R01
+    JNZ R01, got
+
+    SLEEP 100
+    JMP wait
+
+    LOADSTR $no_key, R02
+    PRINTSTR R02
+    NEWLINE
+    HALT
+
+.got:
+    LOADSTR $got, R02
+    PRINTSTR R02
+    PRINTREG R00
+    NEWLINE
+    HALT

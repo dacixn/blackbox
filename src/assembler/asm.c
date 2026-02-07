@@ -1195,6 +1195,26 @@ int assemble_file(const char *filename, const char *output_file, int debug)
                 }
             }
         }
+        else if (strncmp(s, "GETKEY", 6) == 0)
+        {
+            if (debug)
+            {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char regname[16];
+
+            if (sscanf(s + 6, " %7s", regname) != 1)
+            {
+                fprintf(stderr, "Syntax error on line %d: expected GETKEY <register>\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t reg = parse_register(regname, lineno);
+
+            fputc(OPCODE_GETKEY, out);
+            fputc(reg, out);
+        }
         else
         {
             fprintf(stderr, "Unknown instruction on line %d:\n %s\n", lineno, s);

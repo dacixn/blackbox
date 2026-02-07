@@ -50,6 +50,7 @@
 
 #define OPCODE_CLRSCR 0x30
 #define OPCODE_RAND 0x31
+#define OPCODE_GETKEY 0x32
 
 #define OPCODE_HALT  0xFF
 
