@@ -21,8 +21,8 @@
   - Syntax: <OP> <dst>, <src>  (first operand = destination)  
   - Encoding: OPCODE_*, 1 byte dst, 1 byte src  
   - DIV: division by zero is an error (interpreter checks).  
-- PRINT_REG: Print integer value of a register (decimal, no newline)  
-  - Syntax: PRINT_REG <register>  
+- PRINTREG: Print integer value of a register (decimal, no newline)  
+  - Syntax: PRINTREG <register>  
   - Encoding: OPCODE_PRINTREG, 1 byte register  
 - PRINT_STACKSIZE: Print the current stack capacity (in elements)
   - Syntax: PRINT_STACKSIZE
@@ -117,3 +117,11 @@
   - Syntax: `SLEEP <ms>`
   - Encoding: `OPCODE_SLEEP`, 4 byte uint32_t ms
   - Behavior: Sleeps for a specified amount of time
+- CLRSCR: Clear console
+  - Syntax: `CLRSCR`
+  - Encoding: `OPCODE_CLRSCR`
+  - Behavior: Clears the console screen
+- RAND: Generate random number
+  - Syntax: `RAND <reg>`, `RAND <reg>, <max>`, or `RAND <reg>, <min>, <max>`
+  - Encoding: `OPCODE_RAND`, 1 byte register, optionally followed by 4 byte max or 4 byte min and 4 byte max
+  - Behavior: Generates a random number and stores it in the specified register. If only a register is provided, generates an unbounded random number. If a max is provided, generates a number between 0 (inclusive) and max (exclusive). If min and max are provided, generates a number between min (inclusive) and max (exclusive).

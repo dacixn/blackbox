@@ -47,6 +47,10 @@
 #define OPCODE_NOT 0x2D
 #define OPCODE_READSTR 0x2E
 #define OPCODE_SLEEP 0x2F
+
+#define OPCODE_CLRSCR 0x30
+#define OPCODE_RAND 0x31
+
 #define OPCODE_HALT  0xFF
 
 #endif

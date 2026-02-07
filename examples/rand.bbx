@@ -1,0 +1,10 @@
+%asm
+%main
+    RAND R00, 32, 64 ; Generate a random number between 32 and 64
+    PRINTREG R00
+    NEWLINE
+
+    RAND R00 ; Generate a random number with no bounds
+    PRINTREG R00
+    NEWLINE
+    HALT

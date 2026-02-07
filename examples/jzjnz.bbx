@@ -4,7 +4,7 @@
     MOV R1, 3
 
     .label_loop:
-    PRINT_REG R1
+    PRINTREG R1
     NEWLINE
 
     MOV R3, 1
@@ -13,7 +13,7 @@
 
     MOV R4, 42
     JZ R1, label_end
-    PRINT_REG R4 ;SHOULD NOT PRINT 42!
+    PRINTREG R4 ;SHOULD NOT PRINT 42!
 
     .label_end:
     HALT

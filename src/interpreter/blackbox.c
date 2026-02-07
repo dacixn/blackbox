@@ -4,6 +4,15 @@
 #include <string.h>
 #include <time.h>
 #include "../define.h"
+#include "../assembler/tools.h"
+#ifdef _WIN32
+#include <windows.h>
+#include <conio.h>
+#else
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -12,6 +21,7 @@ int main(int argc, char *argv[])
         printf("Usage: bbx program.bcx");
         return 1;
     }
+    srand((unsigned int)time(NULL) ^ (uintptr_t)&main);
     int64_t registers[REGISTERS] = {0};
     size_t sp = 0;
     size_t stack_cap = STACK_SIZE;
@@ -445,7 +455,7 @@ int main(int argc, char *argv[])
         {
             if (pc >= size)
             {
-                fprintf(stderr, "Missing operand for PRINT_REG at pc=%zu\n", pc);
+                fprintf(stderr, "Missing operand for PRINTREG at pc=%zu\n", pc);
                 free(program);
                 free(stack);
                 return 1;
@@ -1265,10 +1275,132 @@ int main(int argc, char *argv[])
             }
             uint32_t ms = program[pc] | (program[pc + 1] << 8) | (program[pc + 2] << 16) | (program[pc + 3] << 24);
             pc += 4;
+#ifdef _WIN32
+            Sleep((DWORD)ms);
+#else
             struct timespec req;
             req.tv_sec = ms / 1000;
             req.tv_nsec = (ms % 1000) * 1000000L;
             nanosleep(&req, NULL);
+#endif
+            break;
+        }
+        case OPCODE_CLRSCR:
+        {
+#ifdef _WIN32
+            system("cls");
+#else
+            printf("\x1b[2J\x1b[H", stdout);
+            fflush(stdout);
+#endif
+            break;
+        }
+        case OPCODE_RAND:
+        {
+            if (pc >= size)
+            {
+                fprintf(stderr, "Missing operand for RAND at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t reg = program[pc++];
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register in RAND at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            if (pc + 8 <= size)
+            {
+                int32_t min = program[pc] | (program[pc + 1] << 8) | (program[pc + 2] << 16) | (program[pc + 3] << 24);
+                int32_t max = program[pc + 4] | (program[pc + 5] << 8) | (program[pc + 6] << 16) | (program[pc + 7] << 24);
+                pc += 8;
+                uint64_t r = get_true_random();
+                int64_t lo = (int64_t)min;
+                int64_t hi = (int64_t)max;
+                if (lo > hi)
+                {
+                    int64_t t = lo;
+                    lo = hi;
+                    hi = t;
+                }
+                uint64_t range;
+                if ((uint64_t)(hi - lo) == UINT64_MAX)
+                {
+                    registers[reg] = (int64_t)r;
+                }
+                else
+                {
+                    range = (uint64_t)(hi - lo) + 1;
+                    if (range == 0)
+                        registers[reg] = (int64_t)r;
+                    else
+                        registers[reg] = lo + (int64_t)(r % range);
+                }
+            }
+            else
+            {
+                registers[reg] = (int64_t)get_true_random();
+            }
+            break;
+        }
+        case OPCODE_GETKEY:
+        {
+            if (pc >= size)
+            {
+                fprintf(stderr, "Missing operand for GETKEY at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+            uint8_t reg = program[pc++];
+            if (reg >= REGISTERS)
+            {
+                fprintf(stderr, "Invalid register in GETKEY at pc=%zu\n", pc);
+                free(program);
+                free(stack);
+                return 1;
+            }
+#ifdef _WIN32
+            if (_kbhit())
+            {
+                registers[reg] = (int64_t)_getch();
+            }
+            else
+            {
+                registers[reg] = -1;
+            }
+#else
+            {
+                struct termios oldt, newt;
+                int oldf;
+
+                tcgetattr(STDIN_FILENO, &oldt);
+                newt = oldt;
+                newt.c_lflag &= ~(ICANON | ECHO);
+                tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+                oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+                fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+                int ch = getchar();
+
+                tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+                fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+                if (ch == EOF)
+                {
+                    clearerr(stdin);
+                    registers[reg] = -1;
+                }
+                else
+                {
+                    registers[reg] = (int64_t)ch;
+                }
+            }
+#endif
             break;
         }
         default:

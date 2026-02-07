@@ -22,7 +22,7 @@ int assemble_file(const char *filename, const char *output_file, int debug)
         return 1;
     }
 
-    char line[256];
+    char line[8192];
     int lineno = 0;
 
     while (fgets(line, sizeof(line), in))
@@ -444,7 +444,7 @@ int assemble_file(const char *filename, const char *output_file, int debug)
             fputc(OPCODE_DEC, out);
             fputc(reg, out);
         }
-        else if (strncmp(s, "PRINT_REG", 9) == 0)
+        else if (strncmp(s, "PRINTREG", 8) == 0)
         {
             if (debug)
             {
@@ -452,9 +452,9 @@ int assemble_file(const char *filename, const char *output_file, int debug)
             }
             char regname[16];
 
-            if (sscanf(s + 9, " %7s", regname) != 1)
+            if (sscanf(s + 8, " %7s", regname) != 1)
             {
-                fprintf(stderr, "Syntax error on line %d: expected PRINT_REG <register>\nGot: %s\n", lineno, line);
+                fprintf(stderr, "Syntax error on line %d: expected PRINTREG <register>\nGot: %s\n", lineno, line);
                 fclose(in);
                 fclose(out);
                 return 1;
@@ -1143,6 +1143,57 @@ int assemble_file(const char *filename, const char *output_file, int debug)
             uint32_t ms = strtoul(operand, NULL, 0);
             fputc(OPCODE_SLEEP, out);
             write_u32(out, ms);
+        }
+        else if (strncmp(s, "CLRSCR", 6) == 0)
+        {
+            if (debug)
+            {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            fputc(OPCODE_CLRSCR, out);
+        }
+        else if (strncmp(s, "RAND", 4) == 0)
+        {
+            if (debug)
+            {
+                printf("[DEBUG] Encoding instruction: %s\n", s);
+            }
+            char regname[16];
+            char rest[64] = {0};
+            /* RAND <reg>
+               RAND <reg>, <max>
+               RAND <reg>, <min>, <max> */
+            int matched = sscanf(s + 4, " %3s , %63[^\n]", regname, rest);
+            if (matched < 1)
+            {
+                fprintf(stderr, "Syntax error on line %d: expected RAND <register>[, <max>] or RAND <register>[, <min>, <max>]\nGot: %s\n", lineno, line);
+                fclose(in);
+                fclose(out);
+                return 1;
+            }
+            uint8_t reg = parse_register(regname, lineno);
+
+            fputc(OPCODE_RAND, out);
+            fputc(reg, out);
+
+            if (matched == 2 && rest[0] != '\0')
+            {
+                char a[32] = {0}, b[32] = {0};
+                int cnt = sscanf(rest, " %31[^,] , %31s", a, b);
+                if (cnt == 2)
+                {
+                    int32_t min = (int32_t)strtol(trim(a), NULL, 0);
+                    int32_t max = (int32_t)strtol(trim(b), NULL, 0);
+                    write_u32(out, (uint32_t)min);
+                    write_u32(out, (uint32_t)max);
+                }
+                else
+                {
+                    int32_t max = (int32_t)strtol(trim(rest), NULL, 0);
+                    write_u32(out, (uint32_t)0);
+                    write_u32(out, (uint32_t)max);
+                }
+            }
         }
         else
         {

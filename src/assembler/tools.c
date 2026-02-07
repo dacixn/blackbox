@@ -5,6 +5,11 @@
 #include <ctype.h>
 #include "tools.h"
 #include "../define.h"
+#ifdef _WIN32
+#include <windows.h>
+#include <bcrypt.h>
+#include <stdio.h>
+#endif
 
 uint32_t find_label(const char *name, Label *labels, size_t count)
 {
@@ -95,7 +100,7 @@ size_t instr_size(const char *line)
         return 3;
     else if (strcmp(line, "PRINT_STACKSIZE") == 0)
         return 1;
-    else if (strncmp(line, "PRINT_REG", 9) == 0)
+    else if (strncmp(line, "PRINTREG", 9) == 0)
         return 2;
     else if (strncmp(line, "PRINT", 5) == 0)
         return 2;
@@ -193,6 +198,16 @@ size_t instr_size(const char *line)
         return 2;
     else if (strncmp(line, "SLEEP", 5) == 0)
         return 5;
+    else if (strncmp(line, "CLRSCR", 6) == 0)
+        return 1;
+    else if (strncmp(line, "RAND", 4) == 0)
+    {
+        if (strchr(line, ','))
+            return 2 + 4 + 4;
+        return 2; 
+    }
+    else if (strncmp(line, "GETKEY", 6) == 0)
+        return 2;
     fprintf(stderr, "Unknown instruction for size calculation: %s\n", line);
     exit(1);
 }
@@ -236,4 +251,31 @@ char *trim(char *s)
     while (end >= s && (isspace(*end) || *end == '\r' || *end == '\n'))
         *end-- = '\0';
     return s;
+}
+uint64_t get_true_random() {
+    #ifdef _WIN32
+    uint64_t num;
+    if (!BCRYPT_SUCCESS(BCryptGenRandom(NULL, (PUCHAR)&num, (ULONG)sizeof(num), BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
+        fprintf(stderr, "Random generation failed\n");
+        return 0;
+    }
+    return num;
+    #else
+    uint64_t num = 0;
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd < 0) {
+        perror("open /dev/urandom");
+        return 0;
+    }
+
+    ssize_t n = read(fd, &num, sizeof(num));
+    if (n != sizeof(num)) {
+        fprintf(stderr, "Failed to read 8 bytes from /dev/urandom\n");
+        close(fd);
+        return 0;
+    }
+
+    close(fd);
+    return num;
+    #endif
 }

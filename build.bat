@@ -1,13 +1,13 @@
 @echo off
 if exist "%ROOT%\bbx-asm.exe" del "%ROOT%\bbx-asm.exe"
-if exist "%ROOT%\blackbox.exe" del "%ROOT%\blackbox.exe" 
+if exist "%ROOT%\bbx.exe" del "%ROOT%\bbx.exe" 
 
 SET ROOT=%CD%
 SET SRC=%ROOT%\src
 
 echo Building assembler...
 cd "%SRC%\assembler"
-cl *.c /Fe:"%ROOT%\bbx-asm.exe"
+cl *.c bcrypt.lib /Fe:"%ROOT%\bbx-asm.exe"
 if errorlevel 1 (
     echo Failed to build assembler
     exit /b 1
@@ -15,7 +15,7 @@ if errorlevel 1 (
 
 echo Building interpreter...
 cd "%SRC%\interpreter"
-cl *.c /Fe:"%ROOT%\blackbox.exe"
+cl *.c ../assembler/tools.c bcrypt.lib /Fe:"%ROOT%\bbx.exe"
 if errorlevel 1 (
     echo Failed to build interpreter
     exit /b 1
