@@ -125,3 +125,7 @@
   - Syntax: `RAND <reg>`, `RAND <reg>, <max>`, or `RAND <reg>, <min>, <max>`
   - Encoding: `OPCODE_RAND`, 1 byte register, optionally followed by 4 byte max or 4 byte min and 4 byte max
   - Behavior: Generates a random number and stores it in the specified register. If only a register is provided, generates an unbounded random number. If a max is provided, generates a number between 0 (inclusive) and max (exclusive). If min and max are provided, generates a number between min (inclusive) and max (exclusive).
+- GETKEY: Non-blocking get key from input
+  - Syntax: `GETKEY <reg>`
+  - Encoding: `OPCODE_GETKEY`, 1 byte register
+  - Behavior: Checks if a key has been pressed. If so, stores the key code in the register; otherwise, stores -1. Does not block program execution.
